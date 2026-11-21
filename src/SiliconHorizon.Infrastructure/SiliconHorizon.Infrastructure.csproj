@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>SiliconHorizon.Infrastructure</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SiliconHorizon.Application\SiliconHorizon.Application.csproj" />
+    <ProjectReference Include="..\SiliconHorizon.Domain\SiliconHorizon.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- EF Core 8 + provider SQL Server (đúng phiên bản patch 8.0.34 = .NET 8 SDK 8.0.428) -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.34" />
+    <!-- Chỉ dùng lúc thiết kế để chạy: dotnet ef migrations / dbcontext scaffold -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.34">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <!-- Dapper: gọi 90 stored procedure; proc tự quản lý giao dịch -->
+    <PackageReference Include="Dapper" Version="2.1.100" />
+    <!-- Phát hành/đọc JWT. Chọn bản 8.x mới nhất để không bao giờ xung đột với JwtBearer của API. -->
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.23.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>SiliconHorizon.Domain</RootNamespace>
+  </PropertyGroup>
+
+  <!--
+    Lớp trong cùng (Domain layer): KHÔNG tham chiếu EF Core, Dapper hay ASP.NET.
+    Chỉ chứa entity ánh xạ 1-1 với bảng trong Database/table_and_data.sql và enum nghiệp vụ.
+  -->
+
+</Project>

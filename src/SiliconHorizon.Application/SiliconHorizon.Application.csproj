@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>SiliconHorizon.Application</RootNamespace>
+  </PropertyGroup>
+
+  <!--
+    Lớp Application: use case/DTO/validator và các interface (port).
+    KHÔNG tham chiếu EF Core, Dapper hay ASP.NET — chỉ phụ thuộc Domain.
+    Nhờ vậy có thể thay EF Core bằng Dapper mà không sửa lớp này.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\SiliconHorizon.Domain\SiliconHorizon.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Chỉ cần abstraction của DI để viết AddApplication(); không kéo theo EF Core/Dapper/ASP.NET. -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
+  </ItemGroup>
+
+</Project>

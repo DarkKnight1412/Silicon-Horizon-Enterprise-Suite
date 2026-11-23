@@ -7,17 +7,21 @@ import { formatVnd } from '../../../core/models/common.model';
 import { CartStore } from '../../../core/services/cart.store';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import { EmptyState } from '../../../shared/components/empty-state/empty-state';
+
+/** Số dòng "xương" hiển thị trong lúc tải giỏ. */
+const SKELETON_ROWS = 3;
 
 /**
- * Giỏ hàng (Database/README.md mục 4).
+ * GIỎ HÀNG — giao diện KHÁCH HÀNG (nằm trong `PublicLayout`, cùng theme với trang `/shop`).
+ *
  * Toàn bộ state lấy từ `CartStore` (state toàn cục) nên badge trên header và trang này luôn đồng bộ.
- * Backend tự kiểm tra tồn khi đọc giỏ: món hết hàng bị bỏ tick, món vượt tồn bị giảm số lượng và
- * trả về trong `warnings` — màn hình hiển thị rõ các cảnh báo này.
+ * Backend tự kiểm tra tồn khi đọc giỏ: món hết hàng bị bỏ tick, món vượt tồn bị giảm số lượng và trả
+ * về trong `warnings` — màn hình hiển thị rõ các cảnh báo này.
+ * Khách VÃNG LAI vẫn dùng được giỏ (mã phiên X-Cart-Session); bấm đặt hàng sẽ được đưa tới `/login`.
  */
 @Component({
   selector: 'app-cart-page',
-  imports: [RouterLink, EmptyState],
+  imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cart-page.html',
 })
@@ -38,6 +42,15 @@ export class CartPage {
   /** Dòng đang gọi API (để khoá nút tăng/giảm của riêng dòng đó). */
   protected readonly busyProductId = signal<number | null>(null);
 
+  /** Dòng "xương" cho trạng thái đang tải. */
+  protected readonly skeletonRows: readonly number[] = Array.from(
+    { length: SKELETON_ROWS },
+    (_, i) => i,
+  );
+
+  /** Id các dòng có ảnh tải lỗi ⇒ dùng icon thay thế thay vì ảnh vỡ. */
+  private readonly failedImages = signal<ReadonlySet<number>>(new Set<number>());
+
   protected readonly canCheckout = computed(() => this.totals().selectedCount > 0);
   protected readonly allSelected = computed(() => {
     const items = this.items();
@@ -46,6 +59,16 @@ export class CartPage {
 
   constructor() {
     this.cart.load().subscribe({ error: () => undefined });
+  }
+
+  /** Có hiển thị ảnh không (không có ảnh hoặc ảnh tải lỗi ⇒ dùng icon thay thế). */
+  protected showImage(imageUrl: string | null, key: number): boolean {
+    return imageUrl !== null && !this.failedImages().has(key);
+  }
+
+  /** Ghi nhận ảnh tải lỗi để lần render sau dùng icon. */
+  protected onImageError(key: number): void {
+    this.failedImages.update((ids) => new Set(ids).add(key));
   }
 
   protected increase(item: CartItemDto): void {
@@ -96,12 +119,9 @@ export class CartPage {
     });
   }
 
+  /** Bước tiếp theo là ĐẶT HÀNG (route yêu cầu đăng nhập + vai trò Customer). */
   protected goToCheckout(): void {
     void this.router.navigate(['/orders/checkout']);
-  }
-
-  protected goToCatalog(): void {
-    void this.router.navigate(['/catalog/products']);
   }
 
   protected warningLabel(code: string): string {

@@ -5,16 +5,12 @@ import type { NavItem } from '../core/models/common.model';
  * Cấu hình menu sidebar. `roles`/`permissions` ở đây được `MainLayout` lọc qua
  * `AuthStore.canAccess(...)` — cùng logic với guard nên menu và quyền vào route luôn khớp nhau.
  *
- * Lưu ý: mục "Đơn hàng của tôi" chỉ dành cho vai trò Customer vì backend giới hạn
- * `GET /api/v1/orders` bằng `[Authorize(Roles = "Customer")]` (nhân viên dùng /api/v1/staff/orders,
- * quản trị dùng /api/v1/admin/orders — chưa nằm trong phạm vi màn hình lần này).
+ * Lưu ý: các màn hình DÀNH CHO KHÁCH HÀNG (danh mục sản phẩm, giỏ hàng, đặt hàng, đơn của tôi) KHÔNG còn
+ * nằm ở đây — chúng nằm trong khung khách hàng (`PublicLayout`: `/shop`, `/cart`, `/catalog`, `/orders`).
+ * Sidebar này CHỈ liệt kê chức năng của NHÂN VIÊN & QUẢN LÝ/ADMIN.
  */
 export const NAV_ITEMS: readonly NavItem[] = [
   { label: 'Tổng quan', icon: '🏠', route: '/dashboard' },
-  { label: 'Sản phẩm', icon: '🖥️', route: '/catalog/products' },
-  { label: 'Kiểm tra tương thích', icon: '🧩', route: '/catalog/compatibility' },
-  { label: 'Giỏ hàng', icon: '🛒', route: '/cart' },
-  { label: 'Đơn hàng của tôi', icon: '🧾', route: '/orders', roles: [ROLES.Customer] },
   {
     label: 'Quản trị sản phẩm',
     icon: '⚙️',

@@ -30,7 +30,7 @@ export const HR_ROUTES: Routes = [
     path: 'schedules',
     loadComponent: () => import('./schedule-list/schedule-list').then((m) => m.ScheduleList),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Xếp ca làm việc · Silicon Horizon',
+    title: 'Xếp ca làm việc · Apex Circuit Electronics',
     data: {
       title: 'Xếp ca làm việc',
       roles: HR_VIEWER_ROLES,
@@ -42,7 +42,7 @@ export const HR_ROUTES: Routes = [
     loadComponent: () =>
       import('./attendance-month/attendance-month').then((m) => m.AttendanceMonth),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Chấm công · Silicon Horizon',
+    title: 'Chấm công · Apex Circuit Electronics',
     data: {
       title: 'Chấm công & bảng công tháng',
       roles: HR_VIEWER_ROLES,

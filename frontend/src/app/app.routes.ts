@@ -1,27 +1,42 @@
 import type { Routes } from '@angular/router';
 import { guestGuard } from './core/auth/guest.guard';
+import { staffGuard } from './core/auth/staff.guard';
 
 /**
- * Bảng route gốc.
+ * Bảng route gốc — TÁCH 2 KHU VỰC THEO VAI TRÒ.
  *
- * Cấu trúc:
- * 1. Khung ĐĂNG NHẬP (AuthLayout) — chỉ chứa /login, /register, bị `guestGuard` chặn khi đã đăng nhập.
- * 2. Khung CHÍNH (MainLayout) — mọi màn hình còn lại: mỗi feature nạp lazy bằng `loadChildren`,
- *    từng trang lẻ nạp bằng `loadComponent` (kể cả 2 layout ở đây).
- * 3. Trang 403/404 (`features/errors`) + route `**` bắt mọi đường dẫn sai.
+ * 1. KHUNG KHÁCH HÀNG (PublicLayout) — đặt ĐẦU TIÊN nên mở đường dẫn gốc `/` luôn vào trang chủ giới thiệu.
+ *    Chứa toàn bộ LUỒNG MUA HÀNG: `/shop`, `/cart`, `/catalog` (danh mục & chi tiết sản phẩm) và `/orders`
+ *    (đặt hàng + đơn của tôi), cùng `/about`, `/development`. Khách vãng lai vẫn xem và mua được.
+ * 2. KHUNG XÁC THỰC (AuthLayout) — chỉ `/login`, `/register`, bị `guestGuard` chặn khi đã đăng nhập
+ *    (chuyển về đúng khu vực theo vai trò — `AuthStore.homePath`).
+ * 3. KHUNG NỘI BỘ (MainLayout) — CHỈ dành cho NHÂN VIÊN & QUẢN LÝ/ADMIN (`staffGuard`): tổng quan, quản trị
+ *    sản phẩm, kho, nhà cung cấp, bảo hành, đổi trả, thanh toán, POS, nhân sự, hoa hồng, nhật ký, báo cáo.
+ *    Khách hàng vào đây sẽ bị đẩy về khu vực khách hàng nên KHÔNG bao giờ thấy khung nội bộ.
+ * 4. Trang 403/404 (`features/errors`) + route `**` bắt mọi đường dẫn sai.
  *
- * Lưu ý: khung đăng nhập đứng TRƯỚC để `/login` không bị route `**` của khung chính "nuốt".
+ * Lưu ý: khung xác thực đứng TRƯỚC để `/login` không bị route `**` của khung nội bộ "nuốt".
  */
 export const routes: Routes = [
+  // 1. Khung công khai (landing): mở đường dẫn gốc ⇒ luôn vào TRANG CHỦ. Không cần đăng nhập.
   {
+    path: '',
+    loadComponent: () => import('./layout/public-layout/public-layout').then((m) => m.PublicLayout),
+    loadChildren: () => import('./features/landing/landing.routes').then((m) => m.LANDING_ROUTES),
+  },
+  {
+    // 2. Khung đăng nhập (AuthLayout) — /login, /register.
     path: '',
     loadComponent: () => import('./layout/auth-layout/auth-layout').then((m) => m.AuthLayout),
     canActivate: [guestGuard],
     loadChildren: () => import('./features/auth/auth.routes').then((m) => m.AUTH_ROUTES),
   },
   {
+    // KHU VỰC NỘI BỘ — CHỈ dành cho NHÂN VIÊN & QUẢN LÝ/ADMIN (staffGuard chặn ở đây).
+    // Khách hàng bị đẩy về giao diện mua sắm công khai, nên họ không bao giờ thấy khung này.
     path: '',
     loadComponent: () => import('./layout/main-layout/main-layout').then((m) => m.MainLayout),
+    canActivate: [staffGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       {
@@ -29,19 +44,8 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./features/dashboard/dashboard.routes').then((m) => m.DASHBOARD_ROUTES),
       },
-      {
-        path: 'catalog',
-        loadChildren: () =>
-          import('./features/catalog/catalog.routes').then((m) => m.CATALOG_ROUTES),
-      },
-      {
-        path: 'cart',
-        loadChildren: () => import('./features/cart/cart.routes').then((m) => m.CART_ROUTES),
-      },
-      {
-        path: 'orders',
-        loadChildren: () => import('./features/orders/orders.routes').then((m) => m.ORDERS_ROUTES),
-      },
+      // `catalog` (danh mục & chi tiết sản phẩm), `cart` và `orders` (đặt hàng, đơn của tôi)
+      // đã chuyển sang KHUNG KHÁCH HÀNG — xem `features/landing/landing.routes.ts`.
       {
         path: 'admin',
         loadChildren: () => import('./features/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
@@ -112,7 +116,7 @@ export const routes: Routes = [
         path: '**',
         loadComponent: () =>
           import('./features/errors/not-found/not-found').then((m) => m.NotFound),
-        title: 'Không tìm thấy trang · Silicon Horizon',
+        title: 'Không tìm thấy trang · Apex Circuit Electronics',
       },
     ],
   },

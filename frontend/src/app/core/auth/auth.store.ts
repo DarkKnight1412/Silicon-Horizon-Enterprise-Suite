@@ -178,10 +178,17 @@ export class AuthStore {
   }
 
   /** Đăng xuất do người dùng bấm nút. */
+  /**
+   * Trang "nhà" theo VAI TRÒ — nguồn duy nhất cho mọi chỗ chuyển hướng sau đăng nhập/đăng xuất:
+   * nhân viên & quản lý ⇒ khung NỘI BỘ (`/dashboard`); khách hàng ⇒ khu vực MUA SẮM công khai (`/shop`).
+   */
+  readonly homePath = computed(() => (this.isStaff() ? '/dashboard' : '/shop'));
+
   logout(): void {
     this.clearSession();
     this.notifications.info('Đã đăng xuất khỏi hệ thống.');
-    void this.router.navigate(['/login']);
+    // Về giao diện KHÁCH HÀNG ngay sau khi đăng xuất ⇒ không còn thấy khung nội bộ.
+    void this.router.navigate(['/']);
   }
 
   /** Phiên hết hạn (refresh thất bại): xoá state và về login kèm returnUrl để quay lại sau khi đăng nhập. */

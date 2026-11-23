@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { catchError, forkJoin, of } from 'rxjs';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { isApiError, type ApiError } from '../../../core/models/api-error.model';
 import { formatVnd, type SelectOption } from '../../../core/models/common.model';
@@ -13,6 +14,7 @@ import { CartStore } from '../../../core/services/cart.store';
 import { NotificationService } from '../../../core/services/notification.service';
 import { priceValidator } from '../../../shared/validators/price.validator';
 import { vietnamesePhoneValidator } from '../../../shared/validators/vietnamese-phone.validator';
+import { CatalogApi } from '../../catalog/catalog-api.service';
 import { OrderApi } from '../order-api.service';
 
 /**
@@ -91,7 +93,13 @@ export class Checkout {
     );
 
     if (this.items().length === 0) {
-      this.cart.load().subscribe({ error: () => undefined });
+      // Giỏ chưa có dữ liệu ⇒ nạp xong mới dựng danh sách chi nhánh cho LOOKUP.
+      this.cart.load().subscribe({
+        next: () => this.loadBranchCandidates(),
+        error: () => undefined,
+      });
+    } else {
+      this.loadBranchCandidates();
     }
   }
 
@@ -224,4 +232,135 @@ export class Checkout {
 
     control.updateValueAndValidity({ emitEvent: false });
   }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // LOOKUP CHỌN CHI NHÁNH XUẤT HÀNG / NHẬN HÀNG
+  // Nguồn dữ liệu: `stockByBranch` của GET /api/v1/products/{id} (API CÔNG KHAI) — gộp tồn kho của
+  // CÁC DÒNG ĐANG CHỌN trong giỏ để biết mỗi chi nhánh đáp ứng được bao nhiêu dòng.
+  // (Backend chưa có endpoint công khai trả danh sách chi nhánh ⇒ cách này KHÔNG cần sửa backend.)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  private readonly catalog = inject(CatalogApi);
+
+  protected readonly branchLoading = signal(false);
+  protected readonly branchCandidates = signal<readonly BranchCandidate[]>([]);
+  protected readonly chosenBranchName = signal<string | null>(null);
+
+  /** Ô nhập của LOOKUP: gõ để lọc chi nhánh theo TÊN hoặc MÃ. */
+  protected readonly branchKeyword = new FormControl('', { nonNullable: true });
+
+  /** Đường dự phòng khi khách không thấy chi nhánh mong muốn trong danh sách. */
+  protected readonly manualBranchId = new FormControl<number | null>(null);
+
+  /** Nhãn hiển thị chi nhánh đã chọn. */
+  protected branchLabel(): string {
+    const chosen = this.chosenBranchName();
+
+    if (chosen !== null) {
+      return chosen;
+    }
+
+    const id = this.form.controls.branchId.value;
+
+    return id === null ? '' : `Chi nhánh #${id}`;
+  }
+
+  /** Số DÒNG đang được chọn trong giỏ (mẫu số khi so mức đáp ứng của từng chi nhánh). */
+  protected selectedLineCount(): number {
+    return this.totals().selectedCount;
+  }
+
+  /** Chi nhánh khớp từ khoá của lookup (lọc theo tên hoặc mã). */
+  protected branchMatches(): readonly BranchCandidate[] {
+    const keyword = this.branchKeyword.value.trim().toLowerCase();
+    const all = this.branchCandidates();
+
+    if (keyword.length === 0) {
+      return all;
+    }
+
+    return all.filter(
+      (branch) =>
+        branch.branchName.toLowerCase().includes(keyword) || String(branch.branchId) === keyword,
+    );
+  }
+
+  protected chooseBranch(branch: BranchCandidate): void {
+    this.form.controls.branchId.setValue(branch.branchId);
+    this.form.controls.branchId.markAsTouched();
+    this.chosenBranchName.set(branch.branchName);
+  }
+
+  /** Áp dụng mã chi nhánh khách tự nhập. */
+  protected applyManualBranch(): void {
+    const id = this.manualBranchId.value;
+
+    if (id === null || !Number.isFinite(id) || id < 1) {
+      this.notifications.warning('Mã chi nhánh không hợp lệ', 'Vui lòng nhập số nguyên dương.');
+      return;
+    }
+
+    this.form.controls.branchId.setValue(id);
+    this.form.controls.branchId.markAsTouched();
+    this.chosenBranchName.set(`Chi nhánh #${id}`);
+  }
+
+  /** Gộp tồn kho theo chi nhánh của các dòng đang chọn thành danh sách chi nhánh ứng viên. */
+  private loadBranchCandidates(): void {
+    const selected = this.items().filter((item) => item.isSelected);
+
+    if (selected.length === 0) {
+      this.branchCandidates.set([]);
+      return;
+    }
+
+    this.branchLoading.set(true);
+
+    forkJoin(
+      selected.map((item) =>
+        this.catalog.getProduct(item.productId).pipe(catchError(() => of(null))),
+      ),
+    ).subscribe((details) => {
+      const merged = new Map<number, BranchCandidate>();
+
+      for (const detail of details) {
+        if (detail === null) {
+          continue;
+        }
+
+        for (const stock of detail.stockByBranch) {
+          if (stock.availableQty <= 0) {
+            continue;
+          }
+
+          const existing = merged.get(stock.branchId);
+
+          if (existing === undefined) {
+            merged.set(stock.branchId, {
+              branchId: stock.branchId,
+              branchName: stock.branchName,
+              coveredCount: 1,
+            });
+          } else {
+            existing.coveredCount += 1;
+          }
+        }
+      }
+
+      const list = [...merged.values()].sort(
+        (a, b) => b.coveredCount - a.coveredCount || a.branchName.localeCompare(b.branchName),
+      );
+
+      this.branchCandidates.set(list);
+      this.branchLoading.set(false);
+    });
+  }
+}
+
+/** Một chi nhánh ứng viên cho đơn hàng (gộp từ `stockByBranch` của các dòng trong giỏ). */
+interface BranchCandidate {
+  branchId: number;
+  branchName: string;
+  /** Số DÒNG trong giỏ hiện còn hàng ở chi nhánh này. */
+  coveredCount: number;
 }

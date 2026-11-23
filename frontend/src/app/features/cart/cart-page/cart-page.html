@@ -1,183 +1,233 @@
-<section class="space-y-4">
-  <header class="flex flex-wrap items-end justify-between gap-2">
+<!-- ===== Tiêu đề trang ===== -->
+<section class="border-b border-white/10 bg-slate-950 px-4 py-8 sm:px-6">
+  <div class="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="sh-page-title">Giỏ hàng</h1>
-      <p class="text-sm text-slate-500">
-        {{ items().length }} dòng · {{ totals().selectedCount }} dòng đang chọn
+      <h1 class="text-2xl font-bold text-white sm:text-3xl">Giỏ hàng của bạn</h1>
+      <p class="mt-1 text-sm text-slate-400">
+        @if (items().length === 0) {
+          Chưa có sản phẩm nào
+        } @else {
+          {{ items().length }} sản phẩm · {{ totals().selectedCount }} sản phẩm được chọn
+        }
       </p>
     </div>
-    <a routerLink="/catalog/products" class="text-sm text-brand-700 hover:underline">
+    <a
+      routerLink="/shop"
+      class="rounded-md border border-white/20 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-white/10"
+    >
       ← Tiếp tục mua sắm
     </a>
-  </header>
+  </div>
+</section>
 
-  @if (!isAuthenticated()) {
-    <div class="sh-card border-l-4 border-l-sky-500 p-4 text-sm text-slate-600">
-      Bạn đang mua với tư cách <strong>khách vãng lai</strong> (giỏ giữ theo mã phiên trình duyệt).
-      <a routerLink="/login" class="font-medium text-brand-700 hover:underline">Đăng nhập</a>
-      để lưu giỏ theo tài khoản và đặt hàng.
-    </div>
-  }
+<!-- ===== Nội dung ===== -->
+<section class="bg-slate-950 px-4 py-8 sm:px-6">
+  <div class="mx-auto max-w-6xl space-y-4">
+    @if (!isAuthenticated()) {
+      <!-- Khách vãng lai: giỏ vẫn dùng được nhờ mã phiên trình duyệt -->
+      <div class="rounded-xl border border-sky-500/30 bg-sky-500/10 p-4 text-sm text-sky-100">
+        Bạn đang mua với tư cách <strong class="font-semibold">khách vãng lai</strong> — giỏ hàng được lưu
+        theo phiên trình duyệt.
+        <a routerLink="/login" class="font-medium text-sky-300 underline hover:text-sky-200">Đăng nhập</a>
+        để lưu giỏ theo tài khoản và đặt hàng.
+      </div>
+    }
 
-  @if (warnings().length > 0) {
-    <div class="sh-card border-l-4 border-l-amber-500 p-4">
-      <p class="text-sm font-semibold text-amber-800">Giỏ hàng vừa được điều chỉnh theo tồn kho</p>
-      <ul class="mt-1 space-y-1 text-sm text-amber-900">
-        @for (warning of warnings(); track warning.productId) {
-          <li>
-            <span class="font-medium">{{ warning.name }}</span>
-            — {{ warningLabel(warning.code) }}
-            ({{ warning.oldQuantity }} → {{ warning.newQuantity }})
-          </li>
+    @if (warnings().length > 0) {
+      <!-- Cảnh báo tồn kho do backend trả về khi đọc giỏ -->
+      <div class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+        <p class="text-sm font-semibold text-amber-200">Giỏ hàng vừa được điều chỉnh theo tồn kho</p>
+        <ul class="mt-1 space-y-1 text-sm text-amber-100/90">
+          @for (warning of warnings(); track warning.productId) {
+            <li>
+              <span class="font-medium">{{ warning.name }}</span>
+              — {{ warningLabel(warning.code) }} ({{ warning.oldQuantity }} → {{ warning.newQuantity }})
+            </li>
+          }
+        </ul>
+      </div>
+    }
+
+    @if (loading() && items().length === 0) {
+      <!-- Loading state -->
+      <div class="space-y-3" aria-busy="true">
+        @for (row of skeletonRows; track $index) {
+          <div class="animate-pulse rounded-xl border border-white/10 bg-slate-900/60 p-4">
+            <div class="flex gap-4">
+              <div class="h-16 w-16 shrink-0 rounded-lg bg-slate-800"></div>
+              <div class="flex-1 space-y-3">
+                <div class="h-4 w-2/3 rounded bg-slate-800"></div>
+                <div class="h-3 w-1/3 rounded bg-slate-800"></div>
+                <div class="h-4 w-1/4 rounded bg-slate-800"></div>
+              </div>
+            </div>
+          </div>
         }
-      </ul>
-    </div>
-  }
+      </div>
+    }
 
-  @if (loading() && items().length === 0) {
-    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tải giỏ hàng…</div>
-  } @else if (items().length === 0) {
-    <div class="sh-card">
-      <app-empty-state
-        icon="🛒"
-        title="Giỏ hàng đang trống"
-        description="Thêm sản phẩm từ danh mục để bắt đầu đặt hàng."
-        actionLabel="Xem sản phẩm"
-        (action)="goToCatalog()"
-      />
-    </div>
-  } @else {
-    <div class="grid gap-4 lg:grid-cols-3">
-      <div class="sh-card overflow-x-auto lg:col-span-2">
-        <table class="min-w-full divide-y divide-slate-200 text-sm">
-          <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
-            <tr>
-              <th class="w-10 px-3 py-2">
+    @if (!loading() && items().length === 0) {
+      <!-- Empty state -->
+      <div
+        class="flex flex-col items-center justify-center gap-3 rounded-xl border border-white/10 bg-slate-900/60 px-6 py-16 text-center"
+      >
+        <span class="text-4xl" aria-hidden="true">🛒</span>
+        <p class="text-base font-semibold text-white">Giỏ hàng đang trống</p>
+        <p class="max-w-md text-sm text-slate-400">
+          Hãy thêm linh kiện bạn cần rồi quay lại đây để đặt hàng.
+        </p>
+        <a
+          routerLink="/shop"
+          class="mt-1 rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700"
+        >
+          Xem sản phẩm
+        </a>
+      </div>
+    }
+
+    @if (items().length > 0) {
+      <div class="grid gap-5 lg:grid-cols-3">
+        <!-- Danh sách sản phẩm trong giỏ -->
+        <div class="space-y-3 lg:col-span-2">
+          <label
+            class="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-slate-300"
+          >
+            <input
+              type="checkbox"
+              class="h-4 w-4 rounded border-white/30 bg-slate-800"
+              [checked]="allSelected()"
+              (change)="selectAll(!allSelected())"
+            />
+            <span>Chọn tất cả ({{ items().length }} sản phẩm)</span>
+          </label>
+
+          @for (item of items(); track item.productId) {
+            <article
+              class="rounded-xl border border-white/10 bg-slate-900/60 p-4 transition hover:border-white/20"
+              [class.opacity-60]="!item.isSelected"
+            >
+              <div class="flex gap-4">
                 <input
                   type="checkbox"
-                  class="h-4 w-4 rounded border-slate-300"
-                  aria-label="Chọn tất cả"
-                  [checked]="allSelected()"
-                  (change)="selectAll(!allSelected())"
+                  class="mt-1 h-4 w-4 shrink-0 rounded border-white/30 bg-slate-800"
+                  [attr.aria-label]="'Chọn ' + item.name"
+                  [checked]="item.isSelected"
+                  [disabled]="busyProductId() === item.productId"
+                  (change)="toggleSelect(item)"
                 />
-              </th>
-              <th class="px-3 py-2">Sản phẩm</th>
-              <th class="px-3 py-2">Đơn giá</th>
-              <th class="px-3 py-2">Số lượng</th>
-              <th class="px-3 py-2">Thành tiền</th>
-              <th class="px-3 py-2"></th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100">
-            @for (item of items(); track item.productId) {
-              <tr [class.opacity-60]="!item.isSelected">
-                <td class="px-3 py-2">
-                  <input
-                    type="checkbox"
-                    class="h-4 w-4 rounded border-slate-300"
-                    [attr.aria-label]="'Chọn ' + item.name"
-                    [checked]="item.isSelected"
-                    [disabled]="busyProductId() === item.productId"
-                    (change)="toggleSelect(item)"
-                  />
-                </td>
-                <td class="px-3 py-2">
-                  <div class="flex items-center gap-3">
-                    @if (item.imageUrl) {
-                      <img class="h-12 w-12 rounded object-cover" [src]="item.imageUrl" [alt]="item.name" />
-                    } @else {
-                      <span class="grid h-12 w-12 place-items-center rounded bg-slate-100">🖥️</span>
-                    }
-                    <div>
-                      <a
-                        class="font-medium text-slate-800 hover:text-brand-700"
-                        [routerLink]="['/catalog/products', item.productId]"
-                      >
-                        {{ item.name }}
-                      </a>
-                      <p class="text-xs text-slate-500">{{ item.sku }} · còn {{ item.availableQty }}</p>
+
+                <a
+                  class="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-slate-800"
+                  [routerLink]="['/catalog/products', item.productId]"
+                >
+                  @if (showImage(item.imageUrl, item.productId)) {
+                    <img
+                      class="h-full w-full object-cover"
+                      [src]="item.imageUrl"
+                      [alt]="item.name"
+                      loading="lazy"
+                      (error)="onImageError(item.productId)"
+                    />
+                  } @else {
+                    <span class="grid h-full place-items-center text-2xl text-slate-600" aria-hidden="true">
+                      🖥️
+                    </span>
+                  }
+                </a>
+
+                <div class="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:justify-between">
+                  <div class="min-w-0">
+                    <a
+                      class="line-clamp-2 text-sm font-semibold text-white transition hover:text-brand-300"
+                      [routerLink]="['/catalog/products', item.productId]"
+                    >
+                      {{ item.name }}
+                    </a>
+                    <p class="mt-1 text-[11px] text-slate-500">
+                      SKU: <span class="font-mono">{{ item.sku }}</span> · Còn {{ item.availableQty }}
+                    </p>
+                    <div class="mt-1 flex items-baseline gap-2">
+                      <p class="text-sm font-semibold text-brand-300">{{ formatPrice(item.unitPrice) }}</p>
+                      @if (item.discountPerUnit > 0) {
+                        <p class="text-xs text-slate-500 line-through">{{ formatPrice(item.basePrice) }}</p>
+                      }
                     </div>
                   </div>
-                </td>
-                <td class="px-3 py-2">
-                  <p class="font-medium text-slate-800">{{ formatPrice(item.unitPrice) }}</p>
-                  @if (item.discountPerUnit > 0) {
-                    <p class="text-xs text-slate-400 line-through">
-                      {{ formatPrice(item.basePrice) }}
-                    </p>
-                  }
-                </td>
-                <td class="px-3 py-2">
-                  <div class="inline-flex items-center rounded-md border border-slate-300">
+
+                  <div class="flex items-center gap-3 sm:flex-col sm:items-end">
+                    <div class="inline-flex items-center rounded-md border border-white/20">
+                      <button
+                        type="button"
+                        class="px-2.5 py-1 text-slate-200 transition hover:bg-white/10 disabled:opacity-40"
+                        [disabled]="busyProductId() === item.productId"
+                        (click)="decrease(item)"
+                      >
+                        −
+                      </button>
+                      <span class="min-w-8 border-x border-white/20 px-2 py-1 text-center text-sm text-slate-100">
+                        {{ item.quantity }}
+                      </span>
+                      <button
+                        type="button"
+                        class="px-2.5 py-1 text-slate-200 transition hover:bg-white/10 disabled:opacity-40"
+                        [disabled]="busyProductId() === item.productId || item.quantity >= item.availableQty"
+                        (click)="increase(item)"
+                      >
+                        +
+                      </button>
+                    </div>
+                    <p class="text-sm font-semibold text-white">{{ formatPrice(item.lineTotal) }}</p>
                     <button
                       type="button"
-                      class="px-2 py-1 disabled:opacity-40"
-                      [disabled]="busyProductId() === item.productId"
-                      (click)="decrease(item)"
+                      class="text-xs font-medium text-rose-300 transition hover:text-rose-200"
+                      (click)="remove(item)"
                     >
-                      −
-                    </button>
-                    <span class="min-w-8 border-x border-slate-200 px-2 py-1 text-center">
-                      {{ item.quantity }}
-                    </span>
-                    <button
-                      type="button"
-                      class="px-2 py-1 disabled:opacity-40"
-                      [disabled]="busyProductId() === item.productId || item.quantity >= item.availableQty"
-                      (click)="increase(item)"
-                    >
-                      +
+                      Xoá
                     </button>
                   </div>
-                </td>
-                <td class="px-3 py-2 font-medium text-slate-800">{{ formatPrice(item.lineTotal) }}</td>
-                <td class="px-3 py-2 text-right">
-                  <button
-                    type="button"
-                    class="rounded-md px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50"
-                    (click)="remove(item)"
-                  >
-                    Xoá
-                  </button>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+                </div>
+              </div>
+            </article>
+          }
+        </div>
+
+        <!-- Tóm tắt tiền: chỉ tính các dòng ĐANG ĐƯỢC CHỌN -->
+        <aside class="h-fit rounded-xl border border-white/10 bg-slate-900/60 p-5">
+          <h2 class="text-base font-semibold text-white">Tóm tắt đơn hàng</h2>
+
+          <dl class="mt-4 space-y-2 text-sm">
+            <div class="flex justify-between">
+              <dt class="text-slate-400">Tạm tính</dt>
+              <dd class="text-slate-200">{{ formatPrice(totals().subTotal) }}</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="text-slate-400">Giảm giá</dt>
+              <dd class="text-emerald-300">−{{ formatPrice(totals().discountTotal) }}</dd>
+            </div>
+            <div class="flex justify-between border-t border-white/10 pt-3 text-base font-semibold">
+              <dt class="text-white">Tổng cộng</dt>
+              <dd class="text-brand-300">{{ formatPrice(totals().total) }}</dd>
+            </div>
+          </dl>
+
+          <button
+            type="button"
+            class="mt-5 w-full rounded-md bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
+            [disabled]="!canCheckout()"
+            (click)="goToCheckout()"
+          >
+            {{ isAuthenticated() ? 'Tiến hành đặt hàng' : 'Đăng nhập để đặt hàng' }}
+          </button>
+
+          @if (!canCheckout()) {
+            <p class="mt-2 text-xs text-slate-500">Chọn ít nhất một sản phẩm để đặt hàng.</p>
+          }
+
+          <p class="mt-3 text-[11px] leading-relaxed text-slate-500">
+            Tổng tiền chỉ là tạm tính — giá và khuyến mãi được chốt lại khi bạn xác nhận đơn hàng.
+          </p>
+        </aside>
       </div>
-
-      <!-- Tóm tắt tiền: chỉ tính các dòng đang được tick -->
-      <aside class="sh-card h-fit p-4">
-        <h2 class="text-sm font-semibold text-slate-700">Tóm tắt đơn hàng</h2>
-
-        <dl class="mt-3 space-y-2 text-sm">
-          <div class="flex justify-between">
-            <dt class="text-slate-500">Tạm tính</dt>
-            <dd class="text-slate-800">{{ formatPrice(totals().subTotal) }}</dd>
-          </div>
-          <div class="flex justify-between">
-            <dt class="text-slate-500">Giảm giá</dt>
-            <dd class="text-emerald-700">−{{ formatPrice(totals().discountTotal) }}</dd>
-          </div>
-          <div class="flex justify-between border-t border-slate-200 pt-2 text-base font-semibold">
-            <dt>Tổng cộng</dt>
-            <dd class="text-brand-700">{{ formatPrice(totals().total) }}</dd>
-          </div>
-        </dl>
-
-        <button
-          type="button"
-          class="mt-4 w-full rounded-md bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
-          [disabled]="!canCheckout()"
-          (click)="goToCheckout()"
-        >
-          Tiến hành đặt hàng
-        </button>
-
-        @if (!canCheckout()) {
-          <p class="mt-2 text-xs text-slate-500">Chọn ít nhất một dòng để đặt hàng.</p>
-        }
-      </aside>
-    </div>
-  }
+    }
+  </div>
 </section>

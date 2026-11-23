@@ -7,7 +7,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "silicon-horizon-web": {
+    "ace-web": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -85,10 +85,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "silicon-horizon-web:build:production"
+              "buildTarget": "ace-web:build:production"
             },
             "development": {
-              "buildTarget": "silicon-horizon-web:build:development"
+              "buildTarget": "ace-web:build:development"
             }
           },
           "defaultConfiguration": "development"

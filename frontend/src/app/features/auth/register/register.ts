@@ -11,15 +11,19 @@ import {
   passwordsMatchValidator,
 } from '../../../shared/validators/password-strength.validator';
 import { vietnamesePhoneValidator } from '../../../shared/validators/vietnamese-phone.validator';
-
-/**
- * Đăng ký tài khoản khách hàng (POST /api/auth/register).
- * Form dùng typed reactive forms + validator dùng chung:
- * - `vietnamesePhoneValidator`: số điện thoại VN (0/+84);
- * - `passwordStrengthValidator`: trả danh sách yêu cầu còn thiếu để hiển thị trực tiếp;
- * - `passwordsMatchValidator`: validator cấp group cho cặp mật khẩu / xác nhận.
- * Đăng ký xong tự động đăng nhập để giữ trải nghiệm liền mạch.
- */
+function toInitials(fullName: string): string {
+  return fullName
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // bỏ dấu
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .replace(/[^a-zA-Z\s]/g, '') // bỏ số, ký tự đặc biệt
+    .split(/\s+/)
+    .filter((word) => word.length > 0)
+    .map((word) => word[0])
+    .join('')
+    .toUpperCase();
+}
 @Component({
   selector: 'app-register',
   imports: [ReactiveFormsModule, RouterLink],
@@ -36,12 +40,21 @@ export class Register {
   protected readonly apiError = signal<ApiError | null>(null);
   /** Giá trị mật khẩu để tính thanh đo độ mạnh (chỉ dùng cho hiển thị). */
   private readonly passwordValue = signal('');
+  private usernameEdited = false;
+  protected onFullNameBlur(): void {
+    if (this.usernameEdited) {
+      return;
+    }
 
+    const suggestion = toInitials(this.form.controls.fullName.value);
+    if (suggestion.length > 0) {
+      this.form.controls.username.setValue(suggestion);
+    }
+  }
   protected readonly form = new FormGroup(
     {
       username: new FormControl('', {
         nonNullable: true,
-        validators: [Validators.required, Validators.minLength(4), Validators.maxLength(50)],
       }),
       fullName: new FormControl('', {
         nonNullable: true,
@@ -67,7 +80,11 @@ export class Register {
     // Cập nhật thanh đo độ mạnh mỗi khi mật khẩu đổi (signal cục bộ của màn hình).
     this.form.controls.password.valueChanges.subscribe((value) => this.passwordValue.set(value));
   }
-
+  protected onUsernameInput(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    // Xóa trắng ô => quay lại chế độ tự điền.
+    this.usernameEdited = value.length > 0;
+  }
   protected submit(): void {
     if (this.submitting()) {
       return;
@@ -138,8 +155,10 @@ export class Register {
       next: () => {
         this.submitting.set(false);
         this.cartStore.merge().subscribe({
-          next: () => void this.router.navigate(['/dashboard']),
-          error: () => void this.router.navigate(['/dashboard']),
+          // KHÔNG điều hướng cứng về /dashboard (khung nội bộ nữa): về đúng KHU VỰC THEO VAI TRÒ
+          // — khách hàng ⇒ /shop, nhân viên/quản lý ⇒ /dashboard (xem AuthStore.homePath).
+          next: () => void this.router.navigate([this.authStore.homePath()]),
+          error: () => void this.router.navigate([this.authStore.homePath()]),
         });
       },
       error: () => {

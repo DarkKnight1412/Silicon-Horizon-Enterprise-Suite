@@ -89,27 +89,32 @@
       </div>
 
       <div class="sh-card p-4">
-        <h2 class="text-sm font-semibold text-slate-700">Lối tắt</h2>
+        <h2 class="text-sm font-semibold text-slate-700">Lối tắt (nhân viên)</h2>
         <nav class="mt-2 flex flex-col gap-1 text-sm">
-          <a routerLink="/catalog/products" class="rounded px-2 py-1.5 text-slate-700 hover:bg-slate-50">
-            🖥️ Danh mục sản phẩm
+          <a
+            routerLink="/staff-orders/pos"
+            class="rounded px-2 py-1.5 text-slate-700 hover:bg-slate-50"
+          >
+            🧮 Bán tại quầy (POS)
           </a>
-          <a routerLink="/catalog/compatibility" class="rounded px-2 py-1.5 text-slate-700 hover:bg-slate-50">
-            🧩 Kiểm tra tương thích
+          <a
+            routerLink="/admin/products"
+            class="rounded px-2 py-1.5 text-slate-700 hover:bg-slate-50"
+          >
+            ⚙️ Quản trị sản phẩm
           </a>
-          <a routerLink="/cart" class="rounded px-2 py-1.5 text-slate-700 hover:bg-slate-50">
-            🛒 Giỏ hàng
+          <a
+            routerLink="/inventory/stock"
+            class="rounded px-2 py-1.5 text-slate-700 hover:bg-slate-50"
+          >
+            📦 Tồn kho
           </a>
-          @if (isCustomer()) {
-            <a routerLink="/orders" class="rounded px-2 py-1.5 text-slate-700 hover:bg-slate-50">
-              🧾 Đơn hàng của tôi
-            </a>
-          }
-          @if (isStaff()) {
-            <a routerLink="/admin/products" class="rounded px-2 py-1.5 text-slate-700 hover:bg-slate-50">
-              ⚙️ Quản trị sản phẩm
-            </a>
-          }
+          <a
+            routerLink="/warranty/tickets"
+            class="rounded px-2 py-1.5 text-slate-700 hover:bg-slate-50"
+          >
+            🛠️ Phiếu bảo hành
+          </a>
         </nav>
       </div>
     </aside>

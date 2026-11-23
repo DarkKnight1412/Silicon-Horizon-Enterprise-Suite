@@ -1,6 +1,5 @@
 <section class="sh-card p-6">
   <h1 class="sh-page-title">Đăng ký tài khoản</h1>
-  <p class="mt-1 text-sm text-slate-500">Tài khoản dành cho khách hàng mua linh kiện.</p>
 
   @if (apiError(); as error) {
     <div class="mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
@@ -21,6 +20,7 @@
         id="fullName"
         type="text"
         formControlName="fullName"
+        (blur)="onFullNameBlur()"
         class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
         [class.sh-input-invalid]="form.controls.fullName.touched && form.controls.fullName.invalid"
       />
@@ -80,12 +80,10 @@
         id="username"
         type="text"
         formControlName="username"
+        (input)="onUsernameInput($event)"
         class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
         [class.sh-input-invalid]="form.controls.username.touched && form.controls.username.invalid"
       />
-      @if (form.controls.username.touched && form.controls.username.invalid) {
-        <p class="sh-field-error">Tên đăng nhập từ 4 đến 50 ký tự.</p>
-      }
       @if (fieldError('username'); as message) {
         <p class="sh-field-error">{{ message }}</p>
       }

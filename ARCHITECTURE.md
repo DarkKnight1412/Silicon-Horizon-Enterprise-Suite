@@ -1,4 +1,4 @@
-# KIẾN TRÚC SOLUTION — Silicon Horizon Enterprise Suite
+# KIẾN TRÚC SOLUTION — Apex Circuit Electronics Enterprise Suite
 
 Tài liệu nghiệp vụ: `README.md` (BRD) và `DATABASE_ERD.md`. Tài liệu API + stored procedure: `Database/README.md`.
 

@@ -24,7 +24,7 @@ export const ADMIN_ROUTES: Routes = [
     loadComponent: () =>
       import('./products/admin-product-list/admin-product-list').then((m) => m.AdminProductList),
     canActivate: [authGuard, roleGuard],
-    title: 'Quản trị sản phẩm · Silicon Horizon',
+    title: 'Quản trị sản phẩm · Apex Circuit Electronics',
     data: { title: 'Quản trị sản phẩm', roles: ADMIN_ROLES, permissions: ADMIN_PERMISSIONS },
   },
   {
@@ -33,7 +33,7 @@ export const ADMIN_ROUTES: Routes = [
       import('./products/admin-product-form/admin-product-form').then((m) => m.AdminProductForm),
     canActivate: [authGuard, roleGuard],
     canDeactivate: [pendingChangesGuard],
-    title: 'Thêm sản phẩm · Silicon Horizon',
+    title: 'Thêm sản phẩm · Apex Circuit Electronics',
     data: { title: 'Thêm sản phẩm', roles: ADMIN_ROLES, permissions: ADMIN_PERMISSIONS },
   },
   {
@@ -42,21 +42,21 @@ export const ADMIN_ROUTES: Routes = [
       import('./products/admin-product-form/admin-product-form').then((m) => m.AdminProductForm),
     canActivate: [authGuard, roleGuard],
     canDeactivate: [pendingChangesGuard],
-    title: 'Sửa sản phẩm · Silicon Horizon',
+    title: 'Sửa sản phẩm · Apex Circuit Electronics',
     data: { title: 'Sửa sản phẩm', roles: ADMIN_ROLES, permissions: ADMIN_PERMISSIONS },
   },
   {
     path: 'categories',
     loadComponent: () => import('./categories/admin-categories').then((m) => m.AdminCategories),
     canActivate: [authGuard, roleGuard],
-    title: 'Quản trị danh mục · Silicon Horizon',
+    title: 'Quản trị danh mục · Apex Circuit Electronics',
     data: { title: 'Quản trị danh mục', roles: ADMIN_ROLES, permissions: ADMIN_PERMISSIONS },
   },
   {
     path: 'brands',
     loadComponent: () => import('./brands/admin-brands').then((m) => m.AdminBrands),
     canActivate: [authGuard, roleGuard],
-    title: 'Quản trị thương hiệu · Silicon Horizon',
+    title: 'Quản trị thương hiệu · Apex Circuit Electronics',
     data: { title: 'Quản trị thương hiệu', roles: ADMIN_ROLES, permissions: ADMIN_PERMISSIONS },
   },
 ];

@@ -6,7 +6,7 @@
  *   (http://localhost:4200) rồi `proxy.conf.json` chuyển tiếp sang http://localhost:5270 ⇒ tránh CORS.
  * - Dev gọi trực tiếp (không proxy): 'http://localhost:5270' — xem `environment.development.ts`,
  *   khi đó API phải cho phép origin http://localhost:4200 qua CORS policy "CustomerWeb".
- * - Production: domain API thật, ví dụ 'https://api.siliconhorizon.vn' (KHÔNG có '/api' ở cuối,
+ * - Production: domain API thật, ví dụ 'https://api.apexcircuitelectronics.vn' (KHÔNG có '/api' ở cuối,
  *   vì `apiPathPrefix` đã được ghép thêm).
  */
 export interface Environment {

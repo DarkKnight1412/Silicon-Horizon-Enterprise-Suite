@@ -5,7 +5,8 @@ import { AuthStore } from './auth.store';
 
 /**
  * Guard cho trang dành cho NGƯỜI CHƯA đăng nhập (login/register):
- * đã đăng nhập thì chuyển hướng về `route.data.redirectTo` (mặc định /dashboard).
+ * đã đăng nhập thì chuyển hướng về `route.data.redirectTo`, hoặc mặc định về ĐÚNG KHU VỰC THEO VAI TRÒ
+ * (`AuthStore.homePath`: khách hàng ⇒ `/shop`, nhân viên/quản lý ⇒ `/dashboard`).
  */
 export const guestGuard: CanActivateFn = (route) => {
   const authStore = inject(AuthStore);
@@ -17,5 +18,5 @@ export const guestGuard: CanActivateFn = (route) => {
 
   const data = route.data as AppRouteData;
 
-  return router.createUrlTree([data.redirectTo ?? '/dashboard']);
+  return router.createUrlTree([data.redirectTo ?? authStore.homePath()]);
 };

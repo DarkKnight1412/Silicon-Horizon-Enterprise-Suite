@@ -31,7 +31,7 @@ export const INVENTORY_ROUTES: Routes = [
     path: 'stock',
     loadComponent: () => import('./stock-levels/stock-levels').then((m) => m.StockLevels),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Tồn kho · Silicon Horizon',
+    title: 'Tồn kho · Apex Circuit Electronics',
     data: {
       title: 'Tồn kho',
       roles: STOCK_DESK_ROLES,
@@ -44,7 +44,7 @@ export const INVENTORY_ROUTES: Routes = [
     path: 'movements',
     loadComponent: () => import('./stock-movements/stock-movements').then((m) => m.StockMovements),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Thẻ kho · Silicon Horizon',
+    title: 'Thẻ kho · Apex Circuit Electronics',
     data: { title: 'Thẻ kho', roles: STOCK_DESK_ROLES, permissions: [PERMISSIONS.StockReceipt] },
   },
 
@@ -56,7 +56,7 @@ export const INVENTORY_ROUTES: Routes = [
         (m) => m.PurchaseReceiptList,
       ),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Phiếu nhập kho · Silicon Horizon',
+    title: 'Phiếu nhập kho · Apex Circuit Electronics',
     data: {
       title: 'Phiếu nhập kho',
       roles: STOCK_DESK_ROLES,
@@ -71,7 +71,7 @@ export const INVENTORY_ROUTES: Routes = [
       ),
     canActivate: [authGuard, roleGuard, permissionGuard],
     canDeactivate: [pendingChangesGuard],
-    title: 'Tạo phiếu nhập kho · Silicon Horizon',
+    title: 'Tạo phiếu nhập kho · Apex Circuit Electronics',
     data: {
       title: 'Tạo phiếu nhập kho',
       roles: STOCK_OPERATION_ROLES,
@@ -85,7 +85,7 @@ export const INVENTORY_ROUTES: Routes = [
         (m) => m.PurchaseReceiptDetail,
       ),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Chi tiết phiếu nhập kho · Silicon Horizon',
+    title: 'Chi tiết phiếu nhập kho · Apex Circuit Electronics',
     data: {
       title: 'Chi tiết phiếu nhập kho',
       roles: STOCK_DESK_ROLES,
@@ -102,7 +102,7 @@ export const INVENTORY_ROUTES: Routes = [
       ),
     canActivate: [authGuard, roleGuard, permissionGuard],
     canDeactivate: [pendingChangesGuard],
-    title: 'Tạo phiếu chuyển kho · Silicon Horizon',
+    title: 'Tạo phiếu chuyển kho · Apex Circuit Electronics',
     data: {
       title: 'Tạo phiếu chuyển kho',
       roles: STOCK_OPERATION_ROLES,
@@ -116,7 +116,7 @@ export const INVENTORY_ROUTES: Routes = [
         (m) => m.StockTransferDetail,
       ),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Chi tiết phiếu chuyển kho · Silicon Horizon',
+    title: 'Chi tiết phiếu chuyển kho · Apex Circuit Electronics',
     data: {
       title: 'Chi tiết phiếu chuyển kho',
       roles: STOCK_DESK_ROLES,
@@ -129,7 +129,7 @@ export const INVENTORY_ROUTES: Routes = [
     path: 'stock-takes',
     loadComponent: () => import('./stock-takes/stock-take-create').then((m) => m.StockTakeCreate),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Kiểm kê kho · Silicon Horizon',
+    title: 'Kiểm kê kho · Apex Circuit Electronics',
     data: {
       title: 'Kiểm kê kho',
       roles: STOCK_OPERATION_ROLES,
@@ -140,7 +140,7 @@ export const INVENTORY_ROUTES: Routes = [
     path: 'stock-takes/:id',
     loadComponent: () => import('./stock-takes/stock-take-detail').then((m) => m.StockTakeDetail),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Chi tiết kiểm kê · Silicon Horizon',
+    title: 'Chi tiết kiểm kê · Apex Circuit Electronics',
     data: {
       title: 'Chi tiết kiểm kê',
       roles: STOCK_DESK_ROLES,
@@ -154,7 +154,7 @@ export const INVENTORY_ROUTES: Routes = [
     loadComponent: () =>
       import('./serials/serial-lookup/serial-lookup').then((m) => m.SerialLookup),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Tra cứu serial · Silicon Horizon',
+    title: 'Tra cứu serial · Apex Circuit Electronics',
     data: {
       title: 'Tra cứu serial',
       // Backend `InventoryRoles.SerialLookup` = mọi nhân viên + khách + Admin. Màn quản trị này

@@ -23,7 +23,7 @@ import { AuthStore } from '../../../core/auth/auth.store';
           Về trang tổng quan
         </a>
         <a
-          routerLink="/catalog/products"
+          routerLink="/shop"
           class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
         >
           Xem sản phẩm

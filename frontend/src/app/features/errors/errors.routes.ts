@@ -8,13 +8,13 @@ export const ERROR_ROUTES: Routes = [
   {
     path: '403',
     loadComponent: () => import('./forbidden/forbidden').then((m) => m.Forbidden),
-    title: 'Không đủ quyền · Silicon Horizon',
+    title: 'Không đủ quyền · Apex Circuit Electronics',
     data: { title: 'Không đủ quyền' },
   },
   {
     path: '404',
     loadComponent: () => import('./not-found/not-found').then((m) => m.NotFound),
-    title: 'Không tìm thấy trang · Silicon Horizon',
+    title: 'Không tìm thấy trang · Apex Circuit Electronics',
     data: { title: 'Không tìm thấy trang' },
   },
 ];

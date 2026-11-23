@@ -7,16 +7,12 @@ import { RouterOutlet } from '@angular/router';
   imports: [RouterOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-  <div class="grid min-h-screen place-items-center bg-gradient-to-br from-slate-100 via-white to-brand-50 p-4">
+  <div class="grid min-h-screen place-items-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4">
     <div class="w-full max-w-md">
       <div class="mb-6 flex flex-col items-center gap-3">
-        <img
-          src="/icons/logo.png"
-          alt="Silicon Horizon"
-          class="h-16 w-16"
-        />
-        <p class="whitespace-nowrap text-xl font-bold tracking-wide text-slate-800">
-          Silicon Horizon Enterprise Suite
+        <img src="/icons/logo.png" alt="Apex Circuit Electronics" class="h-16 w-16" />
+        <p class="whitespace-nowrap text-xl font-bold tracking-wide text-white">
+          Apex Circuit Electronics
         </p>
       </div>
 

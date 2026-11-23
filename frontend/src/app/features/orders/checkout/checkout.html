@@ -29,27 +29,99 @@
         <h2 class="text-sm font-semibold text-slate-700">Thông tin nhận hàng</h2>
 
         <div class="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label class="block text-sm font-medium text-slate-700" for="branchId">
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-slate-700">
               Chi nhánh xuất hàng / nhận hàng <span class="text-rose-600">*</span>
             </label>
+
+            <!-- LOOKUP chi nhánh: gõ để lọc theo tên/mã, bấm "Chọn" ở danh sách bên dưới -->
             <input
-              id="branchId"
-              type="number"
-              min="1"
-              formControlName="branchId"
+              id="branchLookup"
+              type="search"
+              placeholder="Tìm theo tên hoặc mã chi nhánh…"
               class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              [class.sh-input-invalid]="form.controls.branchId.touched && form.controls.branchId.invalid"
+              [class.sh-input-invalid]="
+                form.controls.branchId.touched && form.controls.branchId.invalid
+              "
+              [formControl]="branchKeyword"
             />
+
             <p class="mt-1 text-xs text-slate-500">
-              Xem tồn theo chi nhánh ở trang chi tiết sản phẩm để chọn đúng nơi còn hàng.
+              @if (branchLoading()) {
+                Đang kiểm tra tồn kho của các sản phẩm đang chọn…
+              } @else {
+                {{ branchMatches().length }} chi nhánh còn hàng cho các sản phẩm đang chọn.
+              }
             </p>
+
+            @if (branchLabel().length > 0) {
+              <p class="mt-1 text-xs font-medium text-emerald-700">Đã chọn: {{ branchLabel() }}</p>
+            }
+
             @if (form.controls.branchId.touched && form.controls.branchId.invalid) {
-              <p class="sh-field-error">Vui lòng nhập mã chi nhánh (số nguyên dương).</p>
+              <p class="sh-field-error">Vui lòng chọn chi nhánh.</p>
             }
             @if (fieldError('branchId'); as message) {
               <p class="sh-field-error">{{ message }}</p>
             }
+
+            <ul
+              class="mt-2 max-h-56 divide-y divide-slate-100 overflow-y-auto rounded-md border border-slate-200"
+            >
+              @for (branch of branchMatches(); track branch.branchId) {
+                <li class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                  <div class="min-w-0">
+                    <p class="truncate font-medium text-slate-800">{{ branch.branchName }}</p>
+                    <p class="text-xs text-slate-500">Mã chi nhánh: {{ branch.branchId }}</p>
+                  </div>
+                  <span
+                    class="shrink-0 text-xs"
+                    [class]="
+                      branch.coveredCount === selectedLineCount()
+                        ? 'text-emerald-700'
+                        : 'text-amber-700'
+                    "
+                  >
+                    {{ branch.coveredCount }}/{{ selectedLineCount() }} sản phẩm
+                  </span>
+                  <button
+                    type="button"
+                    class="shrink-0 rounded-md bg-brand-600 px-3 py-1 text-xs font-medium text-white transition hover:bg-brand-700"
+                    (click)="chooseBranch(branch)"
+                  >
+                    Chọn
+                  </button>
+                </li>
+              } @empty {
+                <li class="px-3 py-3 text-xs text-slate-500">
+                  @if (branchLoading()) {
+                    Đang tải…
+                  } @else {
+                    Không có chi nhánh nào khớp — thử từ khoá khác, hoặc nhập mã chi nhánh bên dưới.
+                  }
+                </li>
+              }
+            </ul>
+
+            <!-- Đường dự phòng khi khách không thấy chi nhánh mong muốn -->
+            <div class="mt-2 flex items-center gap-2">
+              <label class="shrink-0 text-xs text-slate-500" for="manualBranchId">Hoặc nhập mã:</label>
+              <input
+                id="manualBranchId"
+                type="number"
+                min="1"
+                placeholder="VD: 1"
+                class="w-28 rounded-md border border-slate-300 px-2 py-1 text-xs"
+                [formControl]="manualBranchId"
+              />
+              <button
+                type="button"
+                class="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                (click)="applyManualBranch()"
+              >
+                Áp dụng
+              </button>
+            </div>
           </div>
 
           <div>
@@ -260,5 +332,6 @@
         </p>
       </aside>
     </form>
+
   }
 </section>

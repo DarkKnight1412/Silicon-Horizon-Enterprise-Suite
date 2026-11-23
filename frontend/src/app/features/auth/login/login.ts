@@ -91,7 +91,8 @@ export class Login {
   }
 
   private redirect(): void {
-    const target = this.returnUrl().length > 0 ? this.returnUrl() : '/dashboard';
+    // Không có returnUrl ⇒ về ĐÚNG KHU VỰC theo vai trò (khách hàng ⇒ /shop, nhân viên ⇒ /dashboard).
+    const target = this.returnUrl().length > 0 ? this.returnUrl() : this.authStore.homePath();
     void this.router.navigateByUrl(target);
   }
 }

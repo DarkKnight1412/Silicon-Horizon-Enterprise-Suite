@@ -8,7 +8,7 @@
 @import "tailwindcss";
 
 /* Design tokens (Tailwind v4 khai báo theme bằng CSS, KHÔNG cần file config JS) */
-@theme {
+@theme static {
   /* Màu thương hiệu (xanh kỹ thuật) */
   --color-brand-50: #eef6ff;
   --color-brand-100: #d9ecff;
@@ -24,7 +24,7 @@
   /* Màu trạng thái nghiệp vụ */
   --color-success: #16a34a;
   --color-warning: #d97706;
-  --color-danger: #dc2626;
+  --color-danger: #e11d48;
   --color-info: #0ea5e9;
 
   /* Font */

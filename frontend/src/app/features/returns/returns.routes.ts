@@ -28,7 +28,7 @@ export const RETURNS_ROUTES: Routes = [
     path: '',
     loadComponent: () => import('./return-list/return-list').then((m) => m.ReturnList),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Yêu cầu đổi trả · Silicon Horizon',
+    title: 'Yêu cầu đổi trả · Apex Circuit Electronics',
     data: {
       title: 'Yêu cầu đổi trả',
       roles: RETURN_VIEWER_ROLES,
@@ -39,7 +39,7 @@ export const RETURNS_ROUTES: Routes = [
     path: ':id',
     loadComponent: () => import('./return-detail/return-detail').then((m) => m.ReturnDetail),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Chi tiết yêu cầu đổi trả · Silicon Horizon',
+    title: 'Chi tiết yêu cầu đổi trả · Apex Circuit Electronics',
     data: {
       title: 'Chi tiết yêu cầu đổi trả',
       roles: RETURN_VIEWER_ROLES,

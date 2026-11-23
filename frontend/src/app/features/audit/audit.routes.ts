@@ -19,7 +19,7 @@ export const AUDIT_ROUTES: Routes = [
     path: '',
     loadComponent: () => import('./audit-log-list/audit-log-list').then((m) => m.AuditLogList),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Nhật ký hệ thống · Silicon Horizon',
+    title: 'Nhật ký hệ thống · Apex Circuit Electronics',
     data: {
       title: 'Nhật ký hệ thống',
       roles: AUDIT_ROLES,

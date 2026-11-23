@@ -26,7 +26,7 @@ export const REPORTS_ROUTES: Routes = [
     loadComponent: () =>
       import('./revenue-report/revenue-report').then((m) => m.RevenueReport),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Báo cáo doanh thu · Silicon Horizon',
+    title: 'Báo cáo doanh thu · Apex Circuit Electronics',
     data: {
       title: 'Báo cáo doanh thu',
       roles: REVENUE_ROLES,
@@ -38,7 +38,7 @@ export const REPORTS_ROUTES: Routes = [
     loadComponent: () =>
       import('./inventory-report/inventory-report').then((m) => m.InventoryReport),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Báo cáo tồn kho · Silicon Horizon',
+    title: 'Báo cáo tồn kho · Apex Circuit Electronics',
     data: {
       title: 'Báo cáo tồn kho',
       roles: STOCK_REPORT_ROLES,
@@ -50,7 +50,7 @@ export const REPORTS_ROUTES: Routes = [
     loadComponent: () =>
       import('./serial-status-report/serial-status-report').then((m) => m.SerialStatusReport),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Báo cáo serial theo trạng thái · Silicon Horizon',
+    title: 'Báo cáo serial theo trạng thái · Apex Circuit Electronics',
     data: {
       title: 'Báo cáo serial theo trạng thái',
       roles: STOCK_REPORT_ROLES,
@@ -61,7 +61,7 @@ export const REPORTS_ROUTES: Routes = [
     path: 'debt',
     loadComponent: () => import('./debt-report/debt-report').then((m) => m.DebtReport),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Báo cáo công nợ · Silicon Horizon',
+    title: 'Báo cáo công nợ · Apex Circuit Electronics',
     data: {
       title: 'Báo cáo công nợ',
       roles: DEBT_ROLES,
@@ -74,7 +74,7 @@ export const REPORTS_ROUTES: Routes = [
     loadComponent: () =>
       import('./warranty-report/warranty-report').then((m) => m.WarrantyReport),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Báo cáo bảo hành · Silicon Horizon',
+    title: 'Báo cáo bảo hành · Apex Circuit Electronics',
     data: {
       title: 'Báo cáo bảo hành',
       roles: REVENUE_ROLES,

@@ -27,7 +27,7 @@ export const SUPPLIERS_ROUTES: Routes = [
     loadComponent: () =>
       import('./supplier-list/supplier-list').then((m) => m.SupplierList),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Nhà cung cấp · Silicon Horizon',
+    title: 'Nhà cung cấp · Apex Circuit Electronics',
     data: {
       title: 'Nhà cung cấp',
       roles: SUPPLIER_READ_ROLES,
@@ -40,7 +40,7 @@ export const SUPPLIERS_ROUTES: Routes = [
       import('./supplier-return/supplier-return').then((m) => m.SupplierReturn),
     canActivate: [authGuard, roleGuard, permissionGuard],
     canDeactivate: [pendingChangesGuard],
-    title: 'Trả hàng nhà cung cấp · Silicon Horizon',
+    title: 'Trả hàng nhà cung cấp · Apex Circuit Electronics',
     data: {
       title: 'Trả hàng nhà cung cấp',
       roles: SUPPLIER_RETURN_ROLES,
@@ -52,7 +52,7 @@ export const SUPPLIERS_ROUTES: Routes = [
     loadComponent: () =>
       import('./supplier-detail/supplier-detail').then((m) => m.SupplierDetail),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Chi tiết nhà cung cấp · Silicon Horizon',
+    title: 'Chi tiết nhà cung cấp · Apex Circuit Electronics',
     data: {
       title: 'Chi tiết nhà cung cấp',
       roles: SUPPLIER_READ_ROLES,

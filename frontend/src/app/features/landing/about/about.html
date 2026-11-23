@@ -1,0 +1,108 @@
+<!-- Tiêu đề trang -->
+<section class="bg-slate-950 px-6 py-16">
+  <div class="mx-auto max-w-3xl text-center">
+    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-brand-300">Về chúng tôi</p>
+    <h1 class="mt-3 text-3xl font-bold text-white sm:text-4xl">Apex Circuit Electronics</h1>
+    <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
+      Chúng tôi là cửa hàng linh kiện máy tính, chuyên cung cấp CPU, RAM, SSD, màn hình, mainboard và
+      phụ kiện chính hãng cho khách lẻ lẫn đại lý.
+    </p>
+  </div>
+</section>
+
+<!-- Câu chuyện + hình ảnh (2 cột) -->
+<section class="border-t border-white/10 bg-slate-900 px-6 py-16">
+  <div class="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2">
+    <figure class="overflow-hidden rounded-xl border border-white/10">
+      <img
+        src="/images/ve_chung_toi.jpg"
+        alt="Linh kiện điện tử trong kho của Apex Circuit Electronics"
+        class="h-64 w-full object-cover sm:h-80"
+      />
+    </figure>
+
+    <div>
+      <h2 class="text-2xl font-semibold text-white">Chúng tôi làm gì</h2>
+      <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
+        Apex Circuit Electronics bán lẻ và bán sỉ linh kiện máy tính: CPU, RAM, ổ cứng, màn hình,
+        mainboard, VGA và phụ kiện. Chúng tôi tư vấn để bạn chọn đúng linh kiện tương thích, báo giá
+        rõ ràng và giao hàng tận nơi.
+      </p>
+      <ul class="mt-6 space-y-3 text-sm text-slate-300">
+        <li class="flex gap-3">
+          <span class="text-brand-400" aria-hidden="true">✓</span>
+          <span>Sản phẩm chính hãng, đầy đủ hoá đơn và chế độ bảo hành.</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="text-brand-400" aria-hidden="true">✓</span>
+          <span>Tư vấn chọn cấu hình phù hợp nhu cầu và ngân sách.</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="text-brand-400" aria-hidden="true">✓</span>
+          <span>Giá tốt cho khách mua lẻ, khách sỉ và đại lý.</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Giá trị cốt lõi -->
+<section class="border-t border-white/10 bg-slate-950 px-6 py-16">
+  <div class="mx-auto max-w-6xl">
+    <h2 class="text-center text-2xl font-semibold text-white sm:text-3xl">Giá trị cốt lõi</h2>
+    <p class="mx-auto mt-3 max-w-2xl text-center text-sm text-slate-300">
+      Bốn điều chúng tôi luôn giữ trong cách phục vụ khách hàng.
+    </p>
+
+    <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      @for (item of values; track item.title) {
+        <article class="rounded-xl border border-white/10 bg-slate-900/60 p-6">
+          <p class="text-3xl" aria-hidden="true">{{ item.icon }}</p>
+          <h3 class="mt-4 text-base font-semibold text-white">{{ item.title }}</h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate-300">{{ item.description }}</p>
+        </article>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- Cam kết dành cho khách hàng -->
+<section class="border-t border-white/10 bg-slate-900 px-6 py-16">
+  <div class="mx-auto max-w-6xl">
+    <h2 class="text-center text-2xl font-semibold text-white sm:text-3xl">Cam kết của chúng tôi</h2>
+
+    <div class="mt-10 grid gap-6 sm:grid-cols-3">
+      @for (item of commitments; track item.title) {
+        <div class="rounded-xl border border-white/10 bg-slate-950/60 p-6 text-center">
+          <p class="text-3xl" aria-hidden="true">{{ item.icon }}</p>
+          <h3 class="mt-4 text-base font-semibold text-white">{{ item.title }}</h3>
+          <p class="mt-2 text-sm text-slate-300">{{ item.description }}</p>
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- Liên kết sang các trang khác -->
+<section class="border-t border-white/10 bg-slate-950 px-6 py-16">
+  <div class="mx-auto max-w-3xl text-center">
+    <h2 class="text-2xl font-semibold text-white sm:text-3xl">Khám phá tiếp</h2>
+    <p class="mt-3 text-sm text-slate-300">
+      Xem định hướng phát triển của chúng tôi hoặc quay lại trang chủ.
+    </p>
+    <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+      <a
+        routerLink="/development"
+        class="rounded-md bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-brand-700"
+      >
+        Định hướng phát triển
+      </a>
+      <a
+        routerLink="/"
+        class="rounded-md border border-white/40 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+      >
+        Về trang chủ
+      </a>
+    </div>
+  </div>
+</section>

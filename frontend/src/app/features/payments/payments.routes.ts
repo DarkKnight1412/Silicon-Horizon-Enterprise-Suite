@@ -23,7 +23,7 @@ export const PAYMENTS_ROUTES: Routes = [
     loadComponent: () =>
       import('./customer-ledger/customer-ledger').then((m) => m.CustomerLedger),
     canActivate: [authGuard, roleGuard],
-    title: 'Công nợ khách hàng · Silicon Horizon',
+    title: 'Công nợ khách hàng · Apex Circuit Electronics',
     data: { title: 'Công nợ khách hàng', roles: LEDGER_ROLES, accessMode: 'roles' },
   },
 ];

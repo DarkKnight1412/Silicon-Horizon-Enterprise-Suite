@@ -25,7 +25,7 @@ export const COMMISSION_ROUTES: Routes = [
     loadComponent: () =>
       import('./commission-summary/commission-summary').then((m) => m.CommissionSummary),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Hoa hồng theo kỳ · Silicon Horizon',
+    title: 'Hoa hồng theo kỳ · Apex Circuit Electronics',
     data: {
       title: 'Hoa hồng theo kỳ',
       roles: COMMISSION_VIEWER_ROLES,

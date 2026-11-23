@@ -8,7 +8,7 @@ export const CART_ROUTES: Routes = [
   {
     path: '',
     loadComponent: () => import('./cart-page/cart-page').then((m) => m.CartPage),
-    title: 'Giỏ hàng · Silicon Horizon',
+    title: 'Giỏ hàng · Apex Circuit Electronics',
     data: { title: 'Giỏ hàng' },
   },
 ];

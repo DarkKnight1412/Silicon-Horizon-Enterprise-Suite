@@ -29,7 +29,7 @@ export const WARRANTY_ROUTES: Routes = [
     path: 'tickets',
     loadComponent: () => import('./warranty-list/warranty-list').then((m) => m.WarrantyList),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Phiếu bảo hành · Silicon Horizon',
+    title: 'Phiếu bảo hành · Apex Circuit Electronics',
     data: {
       title: 'Phiếu bảo hành',
       roles: WARRANTY_VIEWER_ROLES,
@@ -42,7 +42,7 @@ export const WARRANTY_ROUTES: Routes = [
       import('./warranty-receive/warranty-receive').then((m) => m.WarrantyReceive),
     canActivate: [authGuard, roleGuard, permissionGuard],
     canDeactivate: [pendingChangesGuard],
-    title: 'Tiếp nhận bảo hành · Silicon Horizon',
+    title: 'Tiếp nhận bảo hành · Apex Circuit Electronics',
     data: {
       title: 'Tiếp nhận bảo hành',
       roles: WARRANTY_RECEIVE_ROLES,
@@ -54,7 +54,7 @@ export const WARRANTY_ROUTES: Routes = [
     loadComponent: () =>
       import('./warranty-detail/warranty-detail').then((m) => m.WarrantyDetail),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Chi tiết phiếu bảo hành · Silicon Horizon',
+    title: 'Chi tiết phiếu bảo hành · Apex Circuit Electronics',
     data: {
       title: 'Chi tiết phiếu bảo hành',
       roles: WARRANTY_VIEWER_ROLES,
@@ -66,7 +66,7 @@ export const WARRANTY_ROUTES: Routes = [
     loadComponent: () =>
       import('./warranty-lookup/warranty-lookup').then((m) => m.WarrantyLookup),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Tra cứu bảo hành · Silicon Horizon',
+    title: 'Tra cứu bảo hành · Apex Circuit Electronics',
     data: {
       title: 'Tra cứu bảo hành theo serial',
       roles: WARRANTY_VIEWER_ROLES,

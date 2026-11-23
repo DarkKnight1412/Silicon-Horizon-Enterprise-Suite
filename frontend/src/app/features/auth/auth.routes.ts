@@ -18,14 +18,15 @@ export const AUTH_ROUTES: Routes = [
     path: 'login',
     canActivate: [guestGuard],
     loadComponent: () => import('./login/login').then((m) => m.Login),
-    title: 'Đăng nhập · Silicon Horizon',
-    data: { title: 'Đăng nhập', redirectTo: '/dashboard' },
+    title: 'Đăng nhập · Apex Circuit Electronics',
+    // KHÔNG đặt `redirectTo`: guestGuard tự chuyển về đúng khu vực theo vai trò (AuthStore.homePath).
+    data: { title: 'Đăng nhập' },
   },
   {
     path: 'register',
     canActivate: [guestGuard],
     loadComponent: () => import('./register/register').then((m) => m.Register),
-    title: 'Đăng ký · Silicon Horizon',
-    data: { title: 'Đăng ký tài khoản', redirectTo: '/dashboard' },
+    title: 'Đăng ký · Apex Circuit Electronics',
+    data: { title: 'Đăng ký tài khoản' },
   },
 ];

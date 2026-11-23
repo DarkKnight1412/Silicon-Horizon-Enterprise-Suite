@@ -32,7 +32,7 @@ export const STAFF_ORDERS_ROUTES: Routes = [
     loadComponent: () =>
       import('./staff-order-list/staff-order-list').then((m) => m.StaffOrderList),
     canActivate: [authGuard, roleGuard, permissionGuard],
-    title: 'Đơn của chi nhánh · Silicon Horizon',
+    title: 'Đơn của chi nhánh · Apex Circuit Electronics',
     data: {
       title: 'Đơn của chi nhánh',
       roles: BRANCH_ORDER_ROLES,
@@ -44,7 +44,7 @@ export const STAFF_ORDERS_ROUTES: Routes = [
     loadComponent: () => import('./pos-create/pos-create').then((m) => m.PosCreate),
     canActivate: [authGuard, roleGuard, permissionGuard],
     canDeactivate: [pendingChangesGuard],
-    title: 'Bán tại quầy (POS) · Silicon Horizon',
+    title: 'Bán tại quầy (POS) · Apex Circuit Electronics',
     data: {
       title: 'Bán tại quầy (POS)',
       roles: POS_ROLES,

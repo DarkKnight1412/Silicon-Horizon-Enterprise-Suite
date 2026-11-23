@@ -7,7 +7,7 @@ export const DASHBOARD_ROUTES: Routes = [
     path: '',
     loadComponent: () => import('./dashboard').then((m) => m.Dashboard),
     canActivate: [authGuard],
-    title: 'Tổng quan · Silicon Horizon',
+    title: 'Tổng quan · Apex Circuit Electronics',
     data: { title: 'Tổng quan' },
   },
 ];

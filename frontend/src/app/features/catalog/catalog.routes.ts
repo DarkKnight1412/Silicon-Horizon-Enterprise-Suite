@@ -9,22 +9,23 @@ import { productDetailResolver } from './product-detail.resolver';
 export const CATALOG_ROUTES: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'products' },
   {
+    // Danh sách sản phẩm CŨ đã được thay bằng trang bán hàng thống nhất `/shop`
+    // (trang cũ có giao diện khác) ⇒ chuyển hướng để khách hàng luôn thấy MỘT giao diện duy nhất.
     path: 'products',
-    loadComponent: () => import('./product-list/product-list').then((m) => m.ProductList),
-    title: 'Sản phẩm · Silicon Horizon',
-    data: { title: 'Danh mục sản phẩm' },
+    pathMatch: 'full',
+    redirectTo: '/shop',
   },
   {
     path: 'products/:id',
     loadComponent: () => import('./product-detail/product-detail').then((m) => m.ProductDetail),
     resolve: { product: productDetailResolver },
-    title: 'Chi tiết sản phẩm · Silicon Horizon',
+    title: 'Chi tiết sản phẩm · Apex Circuit Electronics',
     data: { title: 'Chi tiết sản phẩm' },
   },
   {
     path: 'compatibility',
     loadComponent: () => import('./compatibility/compatibility').then((m) => m.Compatibility),
-    title: 'Kiểm tra tương thích · Silicon Horizon',
+    title: 'Kiểm tra tương thích · Apex Circuit Electronics',
     data: { title: 'Kiểm tra tương thích linh kiện' },
   },
 ];

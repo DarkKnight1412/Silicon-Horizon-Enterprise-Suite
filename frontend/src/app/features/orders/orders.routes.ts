@@ -20,14 +20,14 @@ export const ORDERS_ROUTES: Routes = [
     path: '',
     loadComponent: () => import('./order-list/order-list').then((m) => m.OrderListComponent),
     canActivate: [authGuard, roleGuard],
-    title: 'Đơn hàng của tôi · Silicon Horizon',
+    title: 'Đơn hàng của tôi · Apex Circuit Electronics',
     data: { title: 'Đơn hàng của tôi', roles: [ROLES.Customer], accessMode: 'roles' },
   },
   {
     path: 'checkout',
     loadComponent: () => import('./checkout/checkout').then((m) => m.Checkout),
     canActivate: [authGuard, roleGuard],
-    title: 'Đặt hàng · Silicon Horizon',
+    title: 'Đặt hàng · Apex Circuit Electronics',
     data: { title: 'Đặt hàng', roles: [ROLES.Customer], accessMode: 'roles' },
   },
   {
@@ -35,7 +35,7 @@ export const ORDERS_ROUTES: Routes = [
     loadComponent: () => import('./order-detail/order-detail').then((m) => m.OrderDetailComponent),
     canActivate: [authGuard],
     resolve: { order: orderDetailResolver },
-    title: 'Chi tiết đơn hàng · Silicon Horizon',
+    title: 'Chi tiết đơn hàng · Apex Circuit Electronics',
     data: { title: 'Chi tiết đơn hàng' },
   },
 ];

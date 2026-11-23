@@ -1,0 +1,176 @@
+<!-- Khung công khai: thanh điều hướng ngang trên cùng + vùng nội dung theo route + chân trang -->
+<div class="flex min-h-screen flex-col bg-slate-950 text-slate-100">
+  <header
+    class="sticky top-0 z-40 border-b border-white/10 bg-slate-950/80 backdrop-blur-md"
+    style="height: var(--sh-header-height)"
+  >
+    <div class="mx-auto flex h-full max-w-6xl items-center justify-between gap-4 px-4">
+      <!-- Thương hiệu: bấm về trang chủ -->
+      <a routerLink="/" class="flex items-center gap-2" (click)="closeMenu()">
+        <img src="/icons/logo.png" alt="Apex Circuit Electronics" class="h-8 w-8 rounded" />
+        <span class="hidden text-sm font-semibold tracking-wide sm:block">Apex Circuit Electronics</span>
+      </a>
+
+      <!-- Các tiêu đề (ẩn trên màn hình nhỏ, thay bằng menu dọc bên dưới) -->
+      <nav class="hidden items-center gap-1 md:flex">
+        @for (link of navLinks; track link.route) {
+          <a
+            class="rounded-md px-3 py-2 text-sm text-slate-300 transition hover:bg-white/10 hover:text-white"
+            routerLinkActive="bg-white/10 font-semibold text-white"
+            [routerLinkActiveOptions]="{ exact: link.route === '/' }"
+            [routerLink]="link.route"
+          >
+            {{ link.label }}
+          </a>
+        }
+      </nav>
+
+      <div class="flex items-center gap-2">
+        <!-- Giỏ hàng: khách vãng lai vẫn thêm được nhờ mã phiên X-Cart-Session -->
+        <a
+          routerLink="/cart"
+          class="relative rounded-md border border-white/20 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-white/10"
+          aria-label="Giỏ hàng"
+        >
+          🛒
+          @if (cartStore.itemCount() > 0) {
+            <span
+              class="absolute -right-2 -top-2 grid h-5 min-w-5 place-items-center rounded-full bg-rose-600 px-1 text-[11px] font-semibold text-white"
+            >
+              {{ cartStore.itemCount() }}
+            </span>
+          }
+        </a>
+
+        <!-- Đã đăng nhập: hiện TÊN NGƯỜI DÙNG (bấm mở menu) · Chưa đăng nhập: nút "Đăng nhập" -->
+        @if (isAuthenticated()) {
+          <div class="relative">
+            <button
+              type="button"
+              class="flex items-center gap-2 rounded-md border border-white/20 px-3 py-1.5 text-sm text-slate-100 transition hover:bg-white/10"
+              [attr.aria-expanded]="userMenuOpen()"
+              aria-label="Tài khoản của tôi"
+              (click)="toggleUserMenu()"
+            >
+              <span
+                class="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand-600 text-[11px] font-semibold text-white"
+                aria-hidden="true"
+              >
+                {{ userInitial() }}
+              </span>
+              <span class="max-w-32 truncate">{{ displayName() }}</span>
+              <span aria-hidden="true">⌄</span>
+            </button>
+
+            @if (userMenuOpen()) {
+              <!-- Lớp phủ: bấm ra ngoài để đóng menu -->
+              <div class="fixed inset-0 z-40" (click)="closeUserMenu()"></div>
+
+              <div
+                class="absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-xl border border-white/10 bg-slate-900 shadow-xl"
+              >
+                <div class="border-b border-white/10 px-3 py-2">
+                  <p class="truncate text-sm font-medium text-white">{{ displayName() }}</p>
+                  @if (account()?.email; as email) {
+                    <p class="truncate text-[11px] text-slate-400">{{ email }}</p>
+                  }
+                </div>
+
+                <a
+                  routerLink="/orders"
+                  class="block px-3 py-2 text-sm text-slate-200 transition hover:bg-white/10"
+                  (click)="closeUserMenu()"
+                >
+                  🧾 Đơn hàng của tôi
+                </a>
+                <a
+                  routerLink="/cart"
+                  class="block px-3 py-2 text-sm text-slate-200 transition hover:bg-white/10"
+                  (click)="closeUserMenu()"
+                >
+                  🛒 Giỏ hàng
+                </a>
+                @if (isStaff()) {
+                  <a
+                    routerLink="/dashboard"
+                    class="block px-3 py-2 text-sm text-slate-200 transition hover:bg-white/10"
+                    (click)="closeUserMenu()"
+                  >
+                    🏠 Vào trang quản trị
+                  </a>
+                }
+
+                <button
+                  type="button"
+                  class="block w-full border-t border-white/10 px-3 py-2 text-left text-sm text-rose-300 transition hover:bg-white/10"
+                  (click)="logout()"
+                >
+                  ↩ Đăng xuất
+                </button>
+              </div>
+            }
+          </div>
+        } @else {
+          <a
+            routerLink="/login"
+            class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-brand-700"
+          >
+            Đăng nhập
+          </a>
+        }
+
+        <!-- Nút mở/đóng menu trên màn hình nhỏ -->
+        <button
+          type="button"
+          class="rounded-md border border-white/20 px-2 py-1.5 text-sm text-slate-200 md:hidden"
+          aria-label="Mở/đóng menu"
+          (click)="toggleMenu()"
+        >
+          ☰
+        </button>
+      </div>
+    </div>
+
+    <!-- Menu dọc cho màn hình nhỏ -->
+    @if (menuOpen()) {
+      <nav class="border-t border-white/10 bg-slate-950/95 px-4 py-2 md:hidden">
+        @for (link of navLinks; track link.route) {
+          <a
+            class="block rounded-md px-3 py-2 text-sm text-slate-200 hover:bg-white/10"
+            routerLinkActive="bg-white/10 font-semibold text-white"
+            [routerLinkActiveOptions]="{ exact: link.route === '/' }"
+            [routerLink]="link.route"
+            (click)="closeMenu()"
+          >
+            {{ link.label }}
+          </a>
+        }
+      </nav>
+    }
+  </header>
+
+  <!-- `sh-public`: lớp theme cho KHU VỰC KHÁCH HÀNG — styles.scss chuyển các class tông sáng của những
+       màn hình cũ (đặt hàng, chi tiết sản phẩm…) sang tông tối đồng bộ với /shop và /cart. -->
+  <main class="sh-public flex-1">
+    <router-outlet />
+  </main>
+
+  <footer class="border-t border-white/10 bg-slate-950 px-4 py-6">
+    <div
+      class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 text-xs text-slate-400 sm:flex-row"
+    >
+      <p>
+        © {{ currentYear }} Apex Circuit Electronics — Linh kiện máy tính chính hãng: CPU, RAM,
+        ổ cứng, màn hình và phụ kiện.
+      </p>
+      <nav class="flex flex-wrap gap-3">
+        @for (link of navLinks; track link.route) {
+          <a class="hover:text-slate-200" [routerLink]="link.route">{{ link.label }}</a>
+        }
+        @if (!isAuthenticated()) {
+          <a class="hover:text-slate-200" routerLink="/login">Đăng nhập</a>
+        }
+      </nav>
+    </div>
+  </footer>
+</div>

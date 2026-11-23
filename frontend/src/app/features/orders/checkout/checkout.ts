@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { catchError, forkJoin, of } from 'rxjs';
+import { catchError, forkJoin, map, of } from 'rxjs';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { isApiError, type ApiError } from '../../../core/models/api-error.model';
 import { formatVnd, type SelectOption } from '../../../core/models/common.model';
@@ -10,6 +10,7 @@ import {
   type CreateOrderRequest,
 } from '../../../core/models/order.model';
 import type { VoucherValidationDto } from '../../../core/models/voucher.model';
+import { BranchStore } from '../../../core/services/branch.store';
 import { CartStore } from '../../../core/services/cart.store';
 import { NotificationService } from '../../../core/services/notification.service';
 import { priceValidator } from '../../../shared/validators/price.validator';
@@ -235,18 +236,20 @@ export class Checkout {
 
   // ─────────────────────────────────────────────────────────────────────────────
   // LOOKUP CHỌN CHI NHÁNH XUẤT HÀNG / NHẬN HÀNG
-  // Nguồn dữ liệu: `stockByBranch` của GET /api/v1/products/{id} (API CÔNG KHAI) — gộp tồn kho của
-  // CÁC DÒNG ĐANG CHỌN trong giỏ để biết mỗi chi nhánh đáp ứng được bao nhiêu dòng.
-  // (Backend chưa có endpoint công khai trả danh sách chi nhánh ⇒ cách này KHÔNG cần sửa backend.)
+  // Danh sách chi nhánh lấy từ `BranchStore` ⇒ GET /api/v1/branches (API CÔNG KHAI, có mã/tên/địa chỉ/
+  // điện thoại; store cache lại nên chỉ gọi một lần). Mức đáp ứng của từng chi nhánh vẫn tính theo
+  // `stockByBranch` của GET /api/v1/products/{id} cho CÁC DÒNG ĐANG CHỌN trong giỏ
+  // (0 = chi nhánh chưa có sản phẩm nào đang chọn còn hàng).
   // ─────────────────────────────────────────────────────────────────────────────
 
   private readonly catalog = inject(CatalogApi);
+  private readonly branchStore = inject(BranchStore);
 
   protected readonly branchLoading = signal(false);
   protected readonly branchCandidates = signal<readonly BranchCandidate[]>([]);
   protected readonly chosenBranchName = signal<string | null>(null);
 
-  /** Ô nhập của LOOKUP: gõ để lọc chi nhánh theo TÊN hoặc MÃ. */
+  /** Ô nhập của LOOKUP: gõ để lọc chi nhánh theo TÊN / MÃ / ĐỊA CHỈ. */
   protected readonly branchKeyword = new FormControl('', { nonNullable: true });
 
   /** Đường dự phòng khi khách không thấy chi nhánh mong muốn trong danh sách. */
@@ -270,7 +273,7 @@ export class Checkout {
     return this.totals().selectedCount;
   }
 
-  /** Chi nhánh khớp từ khoá của lookup (lọc theo tên hoặc mã). */
+  /** Chi nhánh khớp từ khoá của lookup (tên, mã hoặc địa chỉ). */
   protected branchMatches(): readonly BranchCandidate[] {
     const keyword = this.branchKeyword.value.trim().toLowerCase();
     const all = this.branchCandidates();
@@ -281,7 +284,10 @@ export class Checkout {
 
     return all.filter(
       (branch) =>
-        branch.branchName.toLowerCase().includes(keyword) || String(branch.branchId) === keyword,
+        branch.branchName.toLowerCase().includes(keyword) ||
+        branch.code.toLowerCase().includes(keyword) ||
+        branch.address.toLowerCase().includes(keyword) ||
+        String(branch.branchId) === keyword,
     );
   }
 
@@ -305,51 +311,55 @@ export class Checkout {
     this.chosenBranchName.set(`Chi nhánh #${id}`);
   }
 
-  /** Gộp tồn kho theo chi nhánh của các dòng đang chọn thành danh sách chi nhánh ứng viên. */
+  /**
+   * Ghép DANH SÁCH CHI NHÁNH (`BranchStore` ⇒ GET /api/v1/branches) với MỨC ĐÁP ỨNG tồn kho của các
+   * dòng đang chọn (từ `stockByBranch` của từng sản phẩm). Sắp xếp: chi nhánh đủ hàng nhất lên trước.
+   */
   private loadBranchCandidates(): void {
     const selected = this.items().filter((item) => item.isSelected);
 
-    if (selected.length === 0) {
-      this.branchCandidates.set([]);
-      return;
-    }
+    const coverage$ =
+      selected.length === 0
+        ? of(new Map<number, number>())
+        : forkJoin(
+            selected.map((item) =>
+              this.catalog.getProduct(item.productId).pipe(catchError(() => of(null))),
+            ),
+          ).pipe(
+            map((details) => {
+              const coverage = new Map<number, number>();
+
+              for (const detail of details) {
+                if (detail === null) {
+                  continue;
+                }
+
+                for (const stock of detail.stockByBranch) {
+                  if (stock.availableQty <= 0) {
+                    continue;
+                  }
+
+                  coverage.set(stock.branchId, (coverage.get(stock.branchId) ?? 0) + 1);
+                }
+              }
+
+              return coverage;
+            }),
+          );
 
     this.branchLoading.set(true);
 
-    forkJoin(
-      selected.map((item) =>
-        this.catalog.getProduct(item.productId).pipe(catchError(() => of(null))),
-      ),
-    ).subscribe((details) => {
-      const merged = new Map<number, BranchCandidate>();
-
-      for (const detail of details) {
-        if (detail === null) {
-          continue;
-        }
-
-        for (const stock of detail.stockByBranch) {
-          if (stock.availableQty <= 0) {
-            continue;
-          }
-
-          const existing = merged.get(stock.branchId);
-
-          if (existing === undefined) {
-            merged.set(stock.branchId, {
-              branchId: stock.branchId,
-              branchName: stock.branchName,
-              coveredCount: 1,
-            });
-          } else {
-            existing.coveredCount += 1;
-          }
-        }
-      }
-
-      const list = [...merged.values()].sort(
-        (a, b) => b.coveredCount - a.coveredCount || a.branchName.localeCompare(b.branchName),
-      );
+    forkJoin([this.branchStore.load(), coverage$]).subscribe(([branches, coverage]) => {
+      const list = branches
+        .map((branch) => ({
+          branchId: branch.id,
+          branchName: branch.name,
+          code: branch.code,
+          address: branch.address,
+          phone: branch.phone,
+          coveredCount: coverage.get(branch.id) ?? 0,
+        }))
+        .sort((a, b) => b.coveredCount - a.coveredCount || a.branchName.localeCompare(b.branchName));
 
       this.branchCandidates.set(list);
       this.branchLoading.set(false);
@@ -357,10 +367,13 @@ export class Checkout {
   }
 }
 
-/** Một chi nhánh ứng viên cho đơn hàng (gộp từ `stockByBranch` của các dòng trong giỏ). */
+/** Một chi nhánh ứng viên cho đơn hàng (ghép danh sách chi nhánh với tồn kho của các dòng đang chọn). */
 interface BranchCandidate {
   branchId: number;
   branchName: string;
+  code: string;
+  address: string;
+  phone: string | null;
   /** Số DÒNG trong giỏ hiện còn hàng ở chi nhánh này. */
   coveredCount: number;
 }

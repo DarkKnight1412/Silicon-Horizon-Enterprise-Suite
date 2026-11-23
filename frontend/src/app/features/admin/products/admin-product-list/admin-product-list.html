@@ -1,0 +1,143 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Quản trị sản phẩm</h1>
+      <p class="text-sm text-slate-500">{{ result().totalCount }} sản phẩm</p>
+    </div>
+    <div class="flex gap-2">
+      <a
+        routerLink="/admin/categories"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        🗂️ Danh mục
+      </a>
+      <a
+        routerLink="/admin/brands"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        🏷️ Thương hiệu
+      </a>
+      <a
+        routerLink="/admin/products/new"
+        class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+      >
+        + Thêm sản phẩm
+      </a>
+    </div>
+  </header>
+
+  <form
+    class="sh-card flex flex-wrap items-end gap-3 p-4"
+    [formGroup]="filters"
+    (ngSubmit)="search(1, result().pageSize)"
+  >
+    <div class="min-w-64 flex-1">
+      <label class="block text-sm font-medium text-slate-700" for="keyword">Tìm theo tên / SKU</label>
+      <input
+        id="keyword"
+        type="search"
+        formControlName="keyword"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+    <button
+      type="submit"
+      class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+    >
+      Tìm kiếm
+    </button>
+  </form>
+
+  @if (loading()) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tải sản phẩm…</div>
+  } @else if (result().items.length === 0) {
+    <div class="sh-card">
+      <app-empty-state
+        icon="📦"
+        title="Chưa có sản phẩm nào"
+        description="Bấm 'Thêm sản phẩm' để tạo sản phẩm mới kèm thông số kỹ thuật theo danh mục."
+        actionLabel="Thêm sản phẩm"
+        (action)="goToCreate()"
+      />
+    </div>
+  } @else {
+    <div class="sh-card overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-3 py-2">SKU</th>
+            <th class="px-3 py-2">Sản phẩm</th>
+            <th class="px-3 py-2">Thương hiệu</th>
+            <th class="px-3 py-2 text-right">Giá niêm yết</th>
+            <th class="px-3 py-2 text-right">Giá bán</th>
+            <th class="px-3 py-2 text-right">Tồn</th>
+            <th class="px-3 py-2">Đổi trạng thái</th>
+            <th class="px-3 py-2 text-right"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (product of result().items; track product.id) {
+            <tr>
+              <td class="px-3 py-2 font-mono text-xs text-slate-600">{{ product.sku }}</td>
+              <td class="px-3 py-2">
+                <a
+                  class="font-medium text-slate-800 hover:text-brand-700"
+                  [routerLink]="['/catalog/products', product.id]"
+                >
+                  {{ product.name }}
+                </a>
+                <p class="text-xs text-slate-500">
+                  Bảo hành {{ product.warrantyMonths }} tháng
+                  @if (product.promotionId !== null) {
+                    · <span class="text-rose-600">đang khuyến mãi</span>
+                  }
+                </p>
+              </td>
+              <td class="px-3 py-2 text-slate-600">{{ product.brandName }}</td>
+              <td class="px-3 py-2 text-right text-slate-600">{{ formatPrice(product.basePrice) }}</td>
+              <td class="px-3 py-2 text-right font-medium text-slate-800">
+                {{ formatPrice(product.price) }}
+              </td>
+              <td class="px-3 py-2 text-right">
+                <span [class]="product.availableQty > 0 ? 'text-emerald-700' : 'text-rose-700'">
+                  {{ product.availableQty }}
+                </span>
+              </td>
+              <td class="px-3 py-2">
+                <select
+                  class="rounded-md border border-slate-300 px-2 py-1 text-xs"
+                  [disabled]="busyProductId() === product.id"
+                  (change)="changeStatus(product, $any($event.target).value)"
+                >
+                  <option value="">Đổi trạng thái…</option>
+                  <option value="0">Nháp</option>
+                  <option value="1">Đang bán</option>
+                  <option value="2">Ngừng kinh doanh</option>
+                </select>
+              </td>
+              <td class="px-3 py-2 text-right">
+                <a
+                  class="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                  [routerLink]="['/admin/products', product.id, 'edit']"
+                >
+                  Sửa
+                </a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sh-card">
+      <app-pagination
+        [pageNumber]="result().pageNumber"
+        [pageSize]="result().pageSize"
+        [totalCount]="result().totalCount"
+        [totalPages]="result().totalPages"
+        (pageChange)="onPageChange($event)"
+        (pageSizeChange)="onPageSizeChange($event)"
+      />
+    </div>
+  }
+</section>

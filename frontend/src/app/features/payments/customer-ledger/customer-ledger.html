@@ -1,0 +1,165 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Công nợ khách hàng</h1>
+      <p class="text-sm text-slate-500">
+        Sao kê số dư, hạn mức và các bút toán công nợ (mua chịu / thanh toán / điều chỉnh).
+      </p>
+    </div>
+    <a
+      routerLink="/staff-orders"
+      class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+    >
+      ← Đơn của chi nhánh
+    </a>
+  </header>
+
+  <form class="sh-card grid gap-3 p-4 sm:grid-cols-3" [formGroup]="form" (ngSubmit)="search()" novalidate>
+    <div class="sm:col-span-2">
+      <label class="block text-sm font-medium text-slate-700" for="customerId">
+        Mã khách hàng (CustomerId) <span class="text-rose-600">*</span>
+      </label>
+      <input
+        id="customerId"
+        type="number"
+        min="1"
+        formControlName="customerId"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        [class.sh-input-invalid]="form.controls.customerId.touched && form.controls.customerId.invalid"
+      />
+      @if (form.controls.customerId.touched && form.controls.customerId.invalid) {
+        <p class="sh-field-error">Vui lòng nhập mã khách hàng hợp lệ.</p>
+      }
+      <p class="mt-1 text-xs text-slate-500">
+        backend hiện chưa có endpoint tra cứu khách cho nhân viên — mở công nợ bằng ID khách (hoặc từ
+        link trong chi tiết đơn/khách hàng).
+      </p>
+    </div>
+
+    <div class="flex items-end">
+      <button
+        type="submit"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+        [disabled]="loading()"
+      >
+        {{ loading() ? 'Đang tải…' : 'Tra cứu' }}
+      </button>
+    </div>
+  </form>
+
+  @if (loading()) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tải sao kê công nợ…</div>
+  } @else if (ledger(); as data) {
+    <div class="grid gap-4 sm:grid-cols-3">
+      <div class="sh-card p-4">
+        <p class="text-xs uppercase text-slate-500">Tổng công nợ</p>
+        <p class="mt-1 text-xl font-semibold text-slate-800">{{ formatPrice(data.balance) }}</p>
+        <p class="text-xs text-slate-500">Dương = khách còn nợ</p>
+      </div>
+      <div class="sh-card p-4">
+        <p class="text-xs uppercase text-slate-500">Hạn mức được cấp</p>
+        <p class="mt-1 text-xl font-semibold text-slate-800">{{ formatPrice(data.creditLimit) }}</p>
+        <p class="text-xs text-slate-500">Khách sỉ theo PRC-08</p>
+      </div>
+      <div class="sh-card p-4">
+        <p class="text-xs uppercase text-slate-500">Đã dùng hạn mức</p>
+        <p class="mt-1 text-xl font-semibold text-slate-800">{{ usagePercent(data) }}%</p>
+        <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+          <div
+            class="h-full rounded-full"
+            [class]="usagePercent(data) >= 90 ? 'bg-rose-500' : 'bg-brand-600'"
+            [style.width.%]="usagePercent(data)"
+          ></div>
+        </div>
+      </div>
+    </div>
+    @if (data.entries.length === 0) {
+      <div class="sh-card">
+        <app-empty-state
+          icon="📄"
+          title="Khách chưa có bút toán công nợ"
+          description="Chỉ khách mua chịu (phương thức Công nợ) mới phát sinh bút toán trong sổ công nợ."
+        />
+      </div>
+    } @else {
+      <div class="sh-card overflow-x-auto">
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <tr>
+              <th class="px-3 py-2">#</th>
+              <th class="px-3 py-2">Loại bút toán</th>
+              <th class="px-3 py-2 text-right">Số tiền</th>
+              <th class="px-3 py-2">Hạn thanh toán</th>
+              <th class="px-3 py-2">Tham chiếu</th>
+              <th class="px-3 py-2">Thời điểm</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (entry of data.entries; track entry.id) {
+              <tr>
+                <td class="px-3 py-2 font-mono text-slate-600">{{ entry.id }}</td>
+                <td class="px-3 py-2">
+                  <span
+                    class="rounded-full px-2 py-1 text-xs font-medium"
+                    [class]="
+                      entry.entryType === 0
+                        ? 'bg-amber-100 text-amber-800'
+                        : entry.entryType === 1
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-sky-100 text-sky-800'
+                    "
+                  >
+                    {{ entryTypeLabel(entry.entryType) }}
+                  </span>
+                </td>
+                <td
+                  class="px-3 py-2 text-right font-medium"
+                  [class]="entry.amount < 0 ? 'text-emerald-700' : 'text-slate-800'"
+                >
+                  {{ formatPrice(entry.amount) }}
+                </td>
+                <td class="px-3 py-2 text-slate-600">{{ formatMoment(entry.dueDate) }}</td>
+                <td class="px-3 py-2 text-xs text-slate-500">
+                  @if (entry.orderId !== null) {
+                    <a
+                      class="text-brand-700 hover:underline"
+                      [routerLink]="['/orders', entry.orderId]"
+                    >
+                      Đơn #{{ entry.orderId }}
+                    </a>
+                  }
+                  @if (entry.paymentId !== null) {
+                    <span class="block">Giao dịch #{{ entry.paymentId }}</span>
+                  }
+                  @if (entry.orderId === null && entry.paymentId === null) {
+                    <span>—</span>
+                  }
+                </td>
+                <td class="px-3 py-2 text-slate-600">{{ formatMoment(entry.createdAt) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="sh-card">
+        <app-pagination
+          [pageNumber]="data.pageNumber"
+          [pageSize]="data.pageSize"
+          [totalCount]="data.totalCount"
+          [totalPages]="data.totalPages"
+          (pageChange)="onPageChange($event)"
+          (pageSizeChange)="onPageSizeChange($event)"
+        />
+      </div>
+    }
+  } @else {
+    <div class="sh-card">
+      <app-empty-state
+        icon="💰"
+        title="Chưa có sao kê công nợ"
+        description="Nhập mã khách hàng để xem số dư, hạn mức và các bút toán công nợ."
+      />
+    </div>
+  }
+</section>

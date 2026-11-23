@@ -1,0 +1,209 @@
+@if (loading()) {
+  <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tải nhà cung cấp…</div>
+} @else if (supplier(); as data) {
+  <section class="space-y-4">
+    <nav class="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+      <a routerLink="/suppliers/list" class="hover:text-brand-700">Nhà cung cấp</a>
+      <span>/</span>
+      <span class="font-medium text-slate-800">{{ data.name }}</span>
+      <span
+        class="rounded-full px-2 py-1 text-xs font-medium"
+        [class]="data.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'"
+      >
+        {{ activeLabel(data.isActive) }}
+      </span>
+      @if (busy()) {
+        <span class="text-xs text-slate-400">Đang xử lý…</span>
+      }
+    </nav>
+
+    <div class="grid gap-4 lg:grid-cols-3">
+      <div class="sh-card p-4 lg:col-span-2">
+        <h1 class="sh-page-title">{{ data.name }}</h1>
+        <p class="font-mono text-sm text-slate-500">{{ data.code }}</p>
+
+        <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+          <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+            <dt class="text-slate-500">Mã số thuế</dt>
+            <dd class="font-medium text-slate-800">{{ data.taxCode ?? '—' }}</dd>
+          </div>
+          <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+            <dt class="text-slate-500">Điện thoại</dt>
+            <dd class="font-medium text-slate-800">{{ data.phone ?? '—' }}</dd>
+          </div>
+          <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+            <dt class="text-slate-500">Hạn trả</dt>
+            <dd class="font-medium text-slate-800">{{ data.paymentTermDays }} ngày</dd>
+          </div>
+          <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+            <dt class="text-slate-500">Cập nhật cuối</dt>
+            <dd class="font-medium text-slate-800">
+              {{ formatMoment(data.updatedAt ?? data.createdAt) }}
+            </dd>
+          </div>
+          <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2 sm:col-span-2">
+            <dt class="text-slate-500">Địa chỉ</dt>
+            <dd class="text-right font-medium text-slate-800">{{ data.address ?? '—' }}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <aside class="sh-card h-fit p-4">
+        <h2 class="text-sm font-semibold text-slate-700">Công nợ phải trả</h2>
+        @if (!canManageDebt()) {
+          <p class="mt-2 text-sm text-slate-500">
+            Chỉ Quản lý hoặc Admin xem được công nợ và ghi nhận thanh toán nhà cung cấp.
+          </p>
+        } @else {
+          <p class="mt-2 text-2xl font-semibold text-brand-700">
+            {{ formatPrice(ledger()?.balance ?? 0) }}
+          </p>
+          <p class="mt-1 text-xs text-slate-500">Dương = còn nợ nhà cung cấp.</p>
+          <a
+            class="mt-3 inline-block rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+            [routerLink]="['/suppliers', data.id, 'return']"
+          >
+            Trả hàng nhà cung cấp
+          </a>
+        }
+      </aside>
+    </div>
+
+    @if (canManageDebt()) {
+      <form class="sh-card space-y-3 p-4" [formGroup]="paymentForm" (ngSubmit)="recordPayment()" novalidate>
+        <h2 class="text-sm font-semibold text-slate-700">Ghi nhận thanh toán</h2>
+        <div class="grid gap-3 sm:grid-cols-3">
+          <div>
+            <label class="block text-sm font-medium text-slate-700" for="amount">
+              Số tiền (VND) <span class="text-rose-600">*</span>
+            </label>
+            <input
+              id="amount"
+              type="number"
+              min="1"
+              step="1"
+              formControlName="amount"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              [class.sh-input-invalid]="
+                paymentForm.controls.amount.touched && paymentForm.controls.amount.invalid
+              "
+            />
+            @if (paymentForm.controls.amount.touched && paymentForm.controls.amount.invalid) {
+              <p class="sh-field-error">Số tiền phải lớn hơn 0.</p>
+            }
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700" for="purchaseReceiptId">
+              Phiếu nhập được trả (tuỳ chọn)
+            </label>
+            <input
+              id="purchaseReceiptId"
+              type="number"
+              min="1"
+              step="1"
+              formControlName="purchaseReceiptId"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div class="flex items-end">
+            <button
+              type="submit"
+              class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+              [disabled]="busy()"
+            >
+              {{ busy() ? 'Đang ghi nhận…' : 'Ghi nhận thanh toán' }}
+            </button>
+          </div>
+        </div>
+        <p class="text-xs text-slate-500">
+          Không thể thanh toán vượt công nợ hiện tại (proc trả 409 nếu vượt).
+        </p>
+      </form>
+    }
+
+    @if (canManageDebt()) {
+      <div class="sh-card overflow-x-auto">
+        <h2 class="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700">
+          Sổ công nợ
+        </h2>
+        @if (ledger(); as book) {
+          @if (book.entries.length === 0) {
+            <p class="p-6 text-center text-sm text-slate-500">Chưa có bút toán công nợ nào.</p>
+          } @else {
+            <table class="min-w-full divide-y divide-slate-200 text-sm">
+              <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+                <tr>
+                  <th class="px-3 py-2">Thời điểm</th>
+                  <th class="px-3 py-2">Loại bút toán</th>
+                  <th class="px-3 py-2 text-right">Số tiền</th>
+                  <th class="px-3 py-2">Hạn trả</th>
+                  <th class="px-3 py-2">Chứng từ</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                @for (entry of book.entries; track entry.id) {
+                  <tr>
+                    <td class="px-3 py-2 text-slate-600">{{ formatMoment(entry.createdAt) }}</td>
+                    <td class="px-3 py-2 text-slate-700">{{ ledgerTypeLabel(entry.entryType) }}</td>
+                    <td
+                      class="px-3 py-2 text-right font-medium"
+                      [class]="entry.amount < 0 ? 'text-emerald-700' : 'text-slate-800'"
+                    >
+                      {{ formatPrice(entry.amount) }}
+                    </td>
+                    <td class="px-3 py-2 text-slate-600">{{ formatMoment(entry.dueDate) }}</td>
+                    <td class="px-3 py-2 text-slate-600">
+                      @if (entry.purchaseReceiptId !== null) {
+                        <a
+                          class="text-brand-700 hover:underline"
+                          [routerLink]="['/inventory/receipts', entry.purchaseReceiptId]"
+                        >
+                          Phiếu nhập #{{ entry.purchaseReceiptId }}
+                        </a>
+                      } @else if (entry.supplierReturnId !== null) {
+                        #{{ entry.supplierReturnId }}
+                      } @else {
+                        —
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+
+            <app-pagination
+              [pageNumber]="book.pageNumber"
+              [pageSize]="book.pageSize"
+              [totalCount]="book.totalCount"
+              (pageChange)="loadLedger($event, book.pageSize)"
+              (pageSizeChange)="loadLedger(1, $event)"
+            />
+          }
+        } @else {
+          <p class="p-6 text-center text-sm text-slate-500">
+            Chưa tải được sổ công nợ (kiểm tra quyền hoặc kết nối máy chủ).
+          </p>
+        }
+      </div>
+    }
+
+  </section>
+} @else {
+  <div class="sh-card">
+    <app-empty-state
+      icon="🔍"
+      title="Không tìm thấy nhà cung cấp"
+      description="Nhà cung cấp không tồn tại (backend trả 404)."
+    />
+    <div class="flex justify-center pb-6">
+      <a
+        routerLink="/suppliers/list"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        ← Về danh sách nhà cung cấp
+      </a>
+    </div>
+  </div>
+}

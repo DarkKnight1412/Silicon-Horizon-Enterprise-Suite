@@ -1,0 +1,225 @@
+@let item = product();
+
+<section class="space-y-4">
+  <nav class="flex flex-wrap items-center gap-1 text-sm text-slate-500">
+    <a routerLink="/shop" class="hover:text-brand-700">Sản phẩm</a>
+    <span>/</span>
+    <span class="text-slate-700">{{ item.categoryName }}</span>
+    <span>/</span>
+    <span class="font-medium text-slate-800">{{ item.sku }}</span>
+    @if (canManage()) {
+      <a
+        class="ml-auto rounded-md border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-50"
+        [routerLink]="['/admin/products', item.id, 'edit']"
+      >
+        ✏️ Sửa sản phẩm
+      </a>
+    }
+  </nav>
+
+  <div class="grid gap-4 lg:grid-cols-3">
+    <!-- Ảnh -->
+    <div class="sh-card overflow-hidden">
+      @if (item.images.length > 0) {
+        <img class="h-72 w-full object-cover" [src]="item.images[0]?.url ?? ''" [alt]="item.name" />
+        @if (item.images.length > 1) {
+          <div class="flex gap-2 p-2">
+            @for (image of item.images.slice(1, 5); track image.id) {
+              <img class="h-14 w-14 rounded object-cover" [src]="image.url" [alt]="item.name" />
+            }
+          </div>
+        }
+      } @else {
+        <div class="grid h-72 place-items-center bg-slate-100 text-4xl">🖥️</div>
+      }
+    </div>
+
+    <!-- Thông tin chính + mua hàng -->
+    <div class="sh-card p-4 lg:col-span-2">
+      <div class="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-slate-400">
+            {{ item.brandName }} · {{ item.categoryName }}
+          </p>
+          <h1 class="sh-page-title mt-1">{{ item.name }}</h1>
+        </div>
+        <span
+          class="rounded-full px-2 py-1 text-xs font-medium"
+          [class]="item.status === 1 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'"
+        >
+          {{ statusLabel() }}
+        </span>
+      </div>
+
+      @if (item.shortDescription) {
+        <p class="mt-2 text-sm text-slate-600">{{ item.shortDescription }}</p>
+      }
+
+      <div class="mt-4 flex flex-wrap items-end gap-3">
+        <p class="text-2xl font-semibold text-brand-700">{{ formatPrice(item.price) }}</p>
+        @if (item.price < item.basePrice) {
+          <p class="text-sm text-slate-400 line-through">{{ formatPrice(item.basePrice) }}</p>
+          <span class="rounded bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">
+            Đang khuyến mãi
+          </span>
+        }
+      </div>
+
+      <dl class="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+        <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+          <dt class="text-slate-500">SKU</dt>
+          <dd class="font-medium text-slate-800">{{ item.sku }}</dd>
+        </div>
+        <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+          <dt class="text-slate-500">Bảo hành</dt>
+          <dd class="font-medium text-slate-800">{{ item.warrantyMonths }} tháng</dd>
+        </div>
+        <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+          <dt class="text-slate-500">Quản lý serial</dt>
+          <dd class="font-medium text-slate-800">{{ item.requiresSerial ? 'Có' : 'Không' }}</dd>
+        </div>
+        <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+          <dt class="text-slate-500">Tồn khả dụng</dt>
+          <dd
+            class="font-medium"
+            [class]="item.availableQty > 0 ? 'text-emerald-700' : 'text-rose-700'"
+          >
+            {{ item.availableQty }}
+          </dd>
+        </div>
+      </dl>
+
+      <div class="mt-5 flex flex-wrap items-center gap-3">
+        <div class="flex items-center rounded-md border border-slate-300">
+          <button type="button" class="px-3 py-2 text-lg leading-none" (click)="changeQuantity(-1)">
+            −
+          </button>
+          <input
+            class="w-16 border-x border-slate-200 py-2 text-center text-sm"
+            type="number"
+            min="1"
+            [max]="item.availableQty"
+            [value]="quantity()"
+            (input)="onQuantityInput($event)"
+          />
+          <button type="button" class="px-3 py-2 text-lg leading-none" (click)="changeQuantity(1)">
+            +
+          </button>
+        </div>
+
+        <button
+          type="button"
+          class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+          [disabled]="adding() || item.availableQty <= 0"
+          (click)="addToCart()"
+        >
+          {{ adding() ? 'Đang thêm…' : 'Thêm vào giỏ hàng' }}
+        </button>
+
+        <button
+          type="button"
+          class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+          [disabled]="checking()"
+          (click)="checkCompatibility()"
+        >
+          {{ checking() ? 'Đang kiểm tra…' : '🧩 Kiểm tra tương thích' }}
+        </button>
+
+        <p class="text-sm text-slate-500">Tạm tính: {{ formatPrice(totalPrice()) }}</p>
+      </div>
+
+      @if (compatibility(); as result) {
+        <div
+          class="mt-4 rounded-md border px-3 py-2 text-sm"
+          [class]="
+            result.isCompatible
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+              : 'border-amber-200 bg-amber-50 text-amber-900'
+          "
+        >
+          @if (result.isCompatible) {
+            <p class="font-medium">Không phát hiện vấn đề tương thích cho sản phẩm này.</p>
+          } @else {
+            <p class="font-medium">Cảnh báo tương thích (vẫn có thể đặt hàng):</p>
+            <ul class="mt-1 list-disc space-y-0.5 pl-5">
+              @for (warning of result.warnings; track warning.code) {
+                <li>{{ warningLabel(warning.code) }} — {{ warning.message }}</li>
+              }
+            </ul>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="grid gap-4 lg:grid-cols-3">
+    <!-- Thông số kỹ thuật: tên cột → giá trị của bảng Specs_* tương ứng SpecType -->
+    <div class="sh-card p-4 lg:col-span-2">
+      <h2 class="text-sm font-semibold text-slate-700">
+        Thông số kỹ thuật
+        <span class="ml-1 font-normal text-slate-400">({{ specTypeLabel() }})</span>
+      </h2>
+
+      @if (specifications().length === 0) {
+        <p class="mt-2 text-sm text-slate-500">Sản phẩm chưa được nhập thông số kỹ thuật.</p>
+      } @else {
+        <div class="mt-2 overflow-x-auto">
+          <table class="min-w-full divide-y divide-slate-100 text-sm">
+            <tbody class="divide-y divide-slate-100">
+              @for (spec of specifications(); track spec[0]) {
+                <tr>
+                  <th class="w-56 px-2 py-2 text-left font-medium text-slate-500">{{ spec[0] }}</th>
+                  <td class="px-2 py-2 text-slate-800">{{ spec[1] }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      @if (monitorPorts().length > 0) {
+        <h3 class="mt-4 text-sm font-semibold text-slate-700">Cổng kết nối</h3>
+        <ul class="mt-1 flex flex-wrap gap-2 text-sm">
+          @for (port of monitorPorts(); track port.portType) {
+            <li class="rounded-full bg-slate-100 px-3 py-1 text-slate-700">
+              {{ port.portType }} × {{ port.quantity }}
+            </li>
+          }
+        </ul>
+      }
+
+      @if (item.description) {
+        <h3 class="mt-4 text-sm font-semibold text-slate-700">Mô tả</h3>
+        <p class="mt-1 whitespace-pre-line text-sm text-slate-600">{{ item.description }}</p>
+      }
+
+      @if (item.warrantyTerms) {
+        <h3 class="mt-4 text-sm font-semibold text-slate-700">Điều kiện bảo hành</h3>
+        <p class="mt-1 text-sm text-slate-600">{{ item.warrantyTerms }}</p>
+      }
+    </div>
+
+    <!-- Tồn kho theo chi nhánh (kết quả của usp_Product_GetById) -->
+    <div class="sh-card p-4">
+      <h2 class="text-sm font-semibold text-slate-700">Tồn theo chi nhánh</h2>
+
+      @if (item.stockByBranch.length === 0) {
+        <p class="mt-2 text-sm text-slate-500">Chưa có dữ liệu tồn kho.</p>
+      } @else {
+        <ul class="mt-2 space-y-1 text-sm">
+          @for (stock of item.stockByBranch; track stock.branchId) {
+            <li class="flex items-center justify-between rounded bg-slate-50 px-3 py-2">
+              <span class="text-slate-600">{{ stock.branchName }}</span>
+              <span
+                class="font-medium"
+                [class]="stock.availableQty > 0 ? 'text-emerald-700' : 'text-rose-700'"
+              >
+                {{ stock.availableQty }}
+              </span>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </div>
+</section>

@@ -1,0 +1,278 @@
+@if (loading()) {
+  <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tải yêu cầu đổi trả…</div>
+} @else if (detail(); as data) {
+  <section class="space-y-4">
+    <nav class="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+      <a routerLink="/returns" class="hover:text-brand-700">Yêu cầu đổi trả</a>
+      <span>/</span>
+      <span class="font-mono font-medium text-slate-800">{{ data.request.returnCode }}</span>
+      <span class="rounded-full px-2 py-1 text-xs font-medium" [class]="statusClass(data.request.status)">
+        {{ statusLabel(data.request.status) }}
+      </span>
+      @if (busy()) {
+        <span class="text-xs text-slate-400">Đang xử lý…</span>
+      }
+    </nav>
+
+    <div class="grid gap-4 lg:grid-cols-3">
+      <div class="sh-card p-4 lg:col-span-2">
+        <h1 class="sh-page-title">Yêu cầu {{ data.request.returnCode }}</h1>
+        <p class="text-sm text-slate-500">Tạo lúc {{ formatMoment(data.request.createdAt) }}</p>
+
+        <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+          <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+            <dt class="text-slate-500">Đơn hàng</dt>
+            <dd class="font-medium text-slate-800">
+              <a class="text-brand-700 hover:underline" [routerLink]="['/orders', data.request.orderId]">
+                {{ data.request.orderCode }}
+              </a>
+            </dd>
+          </div>
+          <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+            <dt class="text-slate-500">Khách hàng</dt>
+            <dd class="font-medium text-slate-800">#{{ data.request.customerId }}</dd>
+          </div>
+          <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+            <dt class="text-slate-500">Chi nhánh</dt>
+            <dd class="font-medium text-slate-800">#{{ data.request.branchId }}</dd>
+          </div>
+          <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+            <dt class="text-slate-500">Duyệt lúc</dt>
+            <dd class="font-medium text-slate-800">{{ formatMoment(data.request.approvedAt) }}</dd>
+          </div>
+        </dl>
+
+        <div class="mt-3 rounded-md border border-slate-200 p-3 text-sm">
+          <p class="font-medium text-slate-700">Lý do đổi trả</p>
+          <p class="mt-1 text-slate-600">{{ data.request.reason }}</p>
+        </div>
+      </div>
+
+      <aside class="sh-card h-fit p-4">
+        <h2 class="text-sm font-semibold text-slate-700">Tiền hoàn dự kiến</h2>
+        <p class="mt-2 text-2xl font-semibold text-brand-700">{{ formatPrice(data.request.refundAmount) }}</p>
+        <p class="mt-2 text-xs text-slate-500">
+          Số dự kiến đã trừ phần voucher phân bổ và không gồm phí vận chuyển. Số hoàn thực tế khi
+          hoàn tiền không được vượt quá số này.
+        </p>
+      </aside>
+    </div>
+
+    <div class="sh-card overflow-x-auto">
+      <h2 class="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700">
+        Dòng hàng trả ({{ data.items.length }})
+      </h2>
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-3 py-2">Sản phẩm</th>
+            <th class="px-3 py-2">Serial</th>
+            <th class="px-3 py-2 text-right">Số lượng</th>
+            <th class="px-3 py-2">Kết quả kiểm tra</th>
+            @if (canInspect()) {
+              <th class="w-56 px-3 py-2">Nhập kết quả</th>
+            }
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @if (canInspect()) {
+            @for (line of inspectLines.controls; track line) {
+              <tr [formGroup]="line">
+                <td class="px-3 py-2">
+                  <p class="font-medium text-slate-800">{{ line.controls.productName.value }}</p>
+                  <p class="font-mono text-xs text-slate-500">{{ line.controls.sku.value }}</p>
+                </td>
+                <td class="px-3 py-2 font-mono text-xs text-slate-600">
+                  {{ line.controls.serialNumber.value || '—' }}
+                </td>
+                <td class="px-3 py-2 text-right text-slate-700">{{ line.controls.quantity.value }}</td>
+                <td class="px-3 py-2 text-slate-400">—</td>
+                <td class="px-3 py-2">
+                  <select
+                    formControlName="result"
+                    class="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                    [class.sh-input-invalid]="line.controls.result.touched && line.controls.result.invalid"
+                  >
+                    <option [ngValue]="null">— Chọn —</option>
+                    <option [ngValue]="inspectionResult.Pass">{{ inspectionLabels[1] }}</option>
+                    <option [ngValue]="inspectionResult.Fail">{{ inspectionLabels[2] }}</option>
+                  </select>
+                  @if (line.controls.result.touched && line.controls.result.invalid) {
+                    <p class="sh-field-error">Chọn kết quả cho dòng này.</p>
+                  }
+                </td>
+              </tr>
+            }
+          } @else {
+            @for (item of data.items; track item.id) {
+              <tr>
+                <td class="px-3 py-2">
+                  <p class="font-medium text-slate-800">{{ item.productName }}</p>
+                  <p class="font-mono text-xs text-slate-500">{{ item.sku }}</p>
+                </td>
+                <td class="px-3 py-2 font-mono text-xs text-slate-600">{{ item.serialNumber ?? '—' }}</td>
+                <td class="px-3 py-2 text-right text-slate-700">{{ item.quantity }}</td>
+                <td class="px-3 py-2">
+                  <span
+                    class="rounded-full px-2 py-0.5 text-xs"
+                    [class]="inspectionClass(item.inspectionResult)"
+                  >
+                    {{ item.inspectionResultName || inspectionLabel(item.inspectionResult) }}
+                  </span>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+
+    @if (canReview()) {
+      <div class="sh-card space-y-3 p-4">
+        <h2 class="text-sm font-semibold text-slate-700">Duyệt yêu cầu (Quản lý / Admin)</h2>
+        <form class="space-y-3" [formGroup]="reviewForm" novalidate>
+          <div>
+            <label class="block text-sm font-medium text-slate-700" for="note">
+              Lý do / ghi chú (bắt buộc khi từ chối)
+            </label>
+            <textarea
+              id="note"
+              rows="2"
+              formControlName="note"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              [class.sh-input-invalid]="reviewForm.controls.note.touched && reviewForm.controls.note.invalid"
+            ></textarea>
+            @if (reviewForm.controls.note.touched && reviewForm.controls.note.invalid) {
+              <p class="sh-field-error">Ghi chú tối đa 300 ký tự.</p>
+            }
+          </div>
+        </form>
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+            [disabled]="busy()"
+            (click)="review(true)"
+          >
+            Duyệt yêu cầu
+          </button>
+          <button
+            type="button"
+            class="rounded-md bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"
+            [disabled]="busy()"
+            (click)="review(false)"
+          >
+            Từ chối
+          </button>
+        </div>
+      </div>
+    }
+
+    @if (canInspect()) {
+      <div class="sh-card flex flex-wrap items-center justify-between gap-3 p-4">
+        <p class="text-sm text-slate-600">
+          Nhập kết quả cho MỌI dòng rồi xác nhận: dòng Đạt cộng lại tồn, dòng Không đạt chuyển serial sang
+          Hàng lỗi (không vào tồn bán được).
+        </p>
+        <button
+          type="button"
+          class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+          [disabled]="busy()"
+          (click)="inspect()"
+        >
+          Xác nhận kiểm tra hàng trả
+        </button>
+      </div>
+    }
+
+    @if (canRefund()) {
+      <div class="sh-card space-y-3 p-4">
+        <h2 class="text-sm font-semibold text-slate-700">Hoàn tiền (Quản lý / Admin)</h2>
+        <form
+          class="grid gap-3 sm:grid-cols-3"
+          [formGroup]="refundForm"
+          (ngSubmit)="refund()"
+          novalidate
+        >
+          <div>
+            <label class="block text-sm font-medium text-slate-700" for="method">
+              Phương thức hoàn <span class="text-rose-600">*</span>
+            </label>
+            <select
+              id="method"
+              formControlName="method"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              [class.sh-input-invalid]="refundForm.controls.method.touched && refundForm.controls.method.invalid"
+            >
+              <option [ngValue]="null">— Chọn phương thức —</option>
+              @for (option of methodOptions; track option.value) {
+                <option [ngValue]="option.value">{{ option.label }}</option>
+              }
+            </select>
+            @if (refundForm.controls.method.touched && refundForm.controls.method.invalid) {
+              <p class="sh-field-error">Chọn phương thức hoàn tiền.</p>
+            }
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700" for="amount">
+              Số tiền hoàn (bỏ trống = số dự kiến)
+            </label>
+            <input
+              id="amount"
+              type="number"
+              min="0"
+              step="1"
+              formControlName="amount"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              [class.sh-input-invalid]="refundForm.controls.amount.touched && refundForm.controls.amount.invalid"
+            />
+            @if (refundForm.controls.amount.touched && refundForm.controls.amount.invalid) {
+              <p class="sh-field-error">Số tiền không âm.</p>
+            }
+          </div>
+
+          <div class="flex items-end">
+            <button
+              type="submit"
+              class="rounded-md bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"
+              [disabled]="busy()"
+            >
+              Hoàn tiền
+            </button>
+          </div>
+        </form>
+        <p class="text-xs text-slate-500">
+          Hoàn tiền sẽ cập nhật trạng thái đơn và THU HỒI hoa hồng theo tỷ lệ số tiền đã hoàn (KPI-04).
+        </p>
+      </div>
+    }
+
+    @if (!canReview() && !canInspect() && !canRefund()) {
+      <div class="sh-card p-4">
+        <p class="text-sm text-slate-500">
+          Không có thao tác nào phù hợp: yêu cầu đang ở trạng thái "{{ statusLabel(data.request.status) }}"
+          hoặc bạn không đủ quyền (duyệt &amp; hoàn tiền: Quản lý/Admin; kiểm tra hàng trả: Thủ kho/Admin).
+        </p>
+      </div>
+    }
+
+  </section>
+} @else {
+  <div class="sh-card">
+    <app-empty-state
+      icon="🔍"
+      title="Không mở được yêu cầu đổi trả"
+      description="Yêu cầu không tồn tại hoặc không thuộc phạm vi của bạn (backend trả 403/404)."
+    />
+    <div class="flex justify-center pb-6">
+      <a
+        routerLink="/returns"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        ← Về danh sách yêu cầu
+      </a>
+    </div>
+  </div>
+}

@@ -1,0 +1,190 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Báo cáo bảo hành</h1>
+      <p class="text-sm text-slate-500">
+        Phiếu bảo hành theo trạng thái, sản phẩm lỗi nhiều và thời gian xử lý trung bình · tính theo
+        ngày nhận phiếu (bao gồm ngày kết thúc).
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2 text-sm">
+      <a routerLink="/reports/revenue" class="rounded-md border border-slate-300 px-3 py-1.5 text-slate-700 hover:bg-slate-50">
+        Doanh thu
+      </a>
+      <a routerLink="/warranty/tickets" class="rounded-md border border-slate-300 px-3 py-1.5 text-slate-700 hover:bg-slate-50">
+        Phiếu bảo hành
+      </a>
+    </div>
+  </header>
+
+  <form class="sh-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4" [formGroup]="filters" (ngSubmit)="load()" novalidate>
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="fromDate">
+        Từ ngày nhận <span class="text-rose-600">*</span>
+      </label>
+      <input
+        id="fromDate"
+        type="date"
+        formControlName="fromDate"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="toDate">
+        Đến ngày nhận <span class="text-rose-600">*</span>
+      </label>
+      <input
+        id="toDate"
+        type="date"
+        formControlName="toDate"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    @if (isAdmin()) {
+      <app-report-branch-select
+        [control]="branchId"
+        [branches]="branches()"
+        controlId="warrantyBranchId"
+      />
+    }
+
+    @if (filters.errors?.['dateRange']; as rangeError) {
+      <p class="sh-field-error lg:col-span-3">{{ rangeError.message }}</p>
+    }
+
+    <div class="flex items-end gap-2">
+      <button
+        type="submit"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+      >
+        Xem báo cáo
+      </button>
+      <button
+        type="button"
+        class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+        (click)="resetFilters()"
+      >
+        Mặc định
+      </button>
+    </div>
+  </form>
+
+  @if (loading()) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tổng hợp bảo hành…</div>
+  } @else if (report(); as data) {
+    <div class="grid gap-4 sm:grid-cols-3">
+      <div class="sh-card p-4">
+        <p class="text-xs uppercase text-slate-500">Phiếu tiếp nhận trong kỳ</p>
+        <p class="mt-1 text-lg font-semibold text-slate-800">{{ formatCount(totalTickets()) }}</p>
+      </div>
+      <div class="sh-card p-4">
+        <p class="text-xs uppercase text-slate-500">Thời gian xử lý trung bình</p>
+        <p class="mt-1 text-lg font-semibold text-slate-800">
+          @if (data.avgHandlingDays === null) {
+            <span class="text-sm font-normal text-slate-500">Chưa có phiếu hoàn tất</span>
+          } @else {
+            {{ data.avgHandlingDays }} ngày
+          }
+        </p>
+      </div>
+      <div class="sh-card p-4">
+        <p class="text-xs uppercase text-slate-500">Phạm vi</p>
+        <p class="mt-1 text-lg font-semibold text-slate-800">
+          {{ data.branchId === null ? 'Toàn hệ thống' : 'Chi nhánh #' + data.branchId }}
+        </p>
+        <p class="text-xs text-slate-500">{{ data.fromDate }} → {{ data.toDate }}</p>
+      </div>
+    </div>
+
+    <div class="sh-card overflow-x-auto">
+      <h2 class="px-3 py-2 text-sm font-semibold text-slate-700">Phiếu theo trạng thái</h2>
+      @if (data.statuses.length === 0) {
+        <app-empty-state
+          icon="🛡️"
+          title="Không có phiếu bảo hành nào trong kỳ"
+          description="Thử nới khoảng ngày hoặc đổi chi nhánh."
+        />
+      } @else {
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <tr>
+              <th class="px-3 py-2">Trạng thái</th>
+              <th class="px-3 py-2 text-right">Số phiếu</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (row of data.statuses; track row.status) {
+              <tr>
+                <td class="px-3 py-2">
+                  <span
+                    class="rounded-full px-2 py-1 text-xs font-medium"
+                    [class]="statusClass(row.status)"
+                  >
+                    {{ row.statusName }}
+                  </span>
+                </td>
+                <td class="px-3 py-2 text-right font-medium text-slate-800">
+                  {{ formatCount(row.tickets) }}
+                </td>
+              </tr>
+            }
+            <tr class="bg-slate-50 font-semibold">
+              <td class="px-3 py-2 text-slate-800">Tổng cộng</td>
+              <td class="px-3 py-2 text-right text-slate-900">{{ formatCount(totalTickets()) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      }
+    </div>
+
+    <div class="sh-card overflow-x-auto">
+      <h2 class="px-3 py-2 text-sm font-semibold text-slate-700">
+        Top sản phẩm có nhiều phiếu bảo hành nhất ({{ data.topDefectiveProducts.length }})
+      </h2>
+
+      @if (data.topDefectiveProducts.length === 0) {
+        <app-empty-state icon="📄" title="Chưa có sản phẩm nào phát sinh bảo hành trong kỳ." />
+      } @else {
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <tr>
+              <th class="px-3 py-2">Sản phẩm</th>
+              <th class="px-3 py-2 text-right">Số phiếu</th>
+              <th class="px-3 py-2 text-right">Đã bán</th>
+              <th class="px-3 py-2 text-right">Tỷ lệ lỗi</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (row of data.topDefectiveProducts; track row.productId) {
+              <tr>
+                <td class="px-3 py-2 text-slate-800">
+                  {{ row.productName }}
+                  <span class="block font-mono text-xs text-slate-500">{{ row.sku }}</span>
+                </td>
+                <td class="px-3 py-2 text-right font-medium text-slate-800">
+                  {{ formatCount(row.tickets) }}
+                </td>
+                <td class="px-3 py-2 text-right text-slate-700">
+                  {{ formatCount(row.soldQuantity) }}
+                </td>
+                <td class="px-3 py-2 text-right text-slate-700">
+                  {{ defectRate(row.tickets, row.soldQuantity) }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  } @else {
+    <div class="sh-card">
+      <app-empty-state
+        icon="🛡️"
+        title="Chưa có dữ liệu báo cáo bảo hành"
+        description="Chọn khoảng ngày rồi bấm “Xem báo cáo”."
+      />
+    </div>
+  }
+</section>

@@ -1,0 +1,255 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Nhật ký hệ thống</h1>
+      <p class="text-sm text-slate-500">
+        Sổ append-only, chỉ đọc · Quản lý chi nhánh chỉ thấy nhật ký chi nhánh mình (BRD 2.2).
+      </p>
+    </div>
+    <a
+      routerLink="/commission"
+      class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+    >
+      Hoa hồng theo kỳ
+    </a>
+  </header>
+
+  <form
+    class="sh-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4"
+    [formGroup]="filters"
+    (ngSubmit)="load(1, result().pageSize)"
+    novalidate
+  >
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="entityType">
+        Loại đối tượng (EntityType)
+      </label>
+      <input
+        id="entityType"
+        type="text"
+        formControlName="entityType"
+        list="entityTypeSuggestions"
+        maxlength="50"
+        placeholder="Order, Product, Attendance…"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+      <datalist id="entityTypeSuggestions">
+        @for (type of entityTypeSuggestions; track type) {
+          <option [value]="type">{{ type }}</option>
+        }
+      </datalist>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="entityId">
+        Id đối tượng (EntityId)
+      </label>
+      <input
+        id="entityId"
+        type="number"
+        min="1"
+        formControlName="entityId"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="userId">Người thực hiện (UserId)</label>
+      <input
+        id="userId"
+        type="number"
+        min="1"
+        formControlName="userId"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="action">Hành động (Action)</label>
+      <input
+        id="action"
+        type="text"
+        formControlName="action"
+        maxlength="60"
+        placeholder="OrderCancelled, AttendanceAdjusted…"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="fromDate">Từ ngày</label>
+      <input
+        id="fromDate"
+        type="date"
+        formControlName="fromDate"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="toDate">Đến ngày</label>
+      <input
+        id="toDate"
+        type="date"
+        formControlName="toDate"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    @if (filters.errors?.['dateRange']; as rangeError) {
+      <p class="sh-field-error lg:col-span-2">{{ rangeError.message }}</p>
+    }
+
+    <div class="flex items-end gap-2">
+      <button
+        type="submit"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+      >
+        Tra cứu
+      </button>
+      <button
+        type="button"
+        class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+        (click)="resetFilters()"
+      >
+        Xoá lọc
+      </button>
+    </div>
+  </form>
+
+  @if (loading()) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tra cứu nhật ký…</div>
+  } @else if (result().items.length === 0) {
+    <div class="sh-card">
+      <app-empty-state
+        icon="🧷"
+        title="Không có bản ghi nhật ký nào khớp bộ lọc"
+        description="Thử nới khoảng thời gian hoặc bỏ một vài điều kiện lọc."
+      />
+    </div>
+  } @else {
+    <div class="sh-card overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-3 py-2">#</th>
+            <th class="px-3 py-2">Thời điểm</th>
+            <th class="px-3 py-2">Người thực hiện</th>
+            <th class="px-3 py-2">Hành động</th>
+            <th class="px-3 py-2">Đối tượng</th>
+            <th class="px-3 py-2">Chi nhánh</th>
+            <th class="px-3 py-2">Lý do</th>
+            <th class="px-3 py-2 text-right"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (entry of result().items; track entry.id) {
+            <tr>
+              <td class="px-3 py-2 font-mono text-slate-600">{{ entry.id }}</td>
+              <td class="px-3 py-2 text-slate-700">{{ formatMoment(entry.createdAt) }}</td>
+              <td class="px-3 py-2 text-slate-700">
+                {{ actorLabel(entry) }}
+                @if (entry.ipAddress) {
+                  <span class="block text-xs text-slate-500">{{ entry.ipAddress }}</span>
+                }
+              </td>
+              <td class="px-3 py-2">
+                <span class="rounded-full bg-indigo-100 px-2 py-1 text-xs font-medium text-indigo-800">
+                  {{ entry.action }}
+                </span>
+              </td>
+              <td class="px-3 py-2 text-slate-700">
+                {{ entry.entityType }}
+                <span class="block font-mono text-xs text-slate-500">#{{ entry.entityId }}</span>
+              </td>
+              <td class="px-3 py-2 text-slate-600">
+                {{ entry.branchId === null ? '—' : '#' + entry.branchId }}
+              </td>
+              <td class="px-3 py-2 text-slate-600">{{ entry.reason ?? '—' }}</td>
+              <td class="px-3 py-2 text-right">
+                <button
+                  type="button"
+                  class="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                  (click)="openDetail(entry)"
+                >
+                  Chi tiết
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sh-card">
+      <app-pagination
+        [pageNumber]="result().pageNumber"
+        [pageSize]="result().pageSize"
+        [totalCount]="result().totalCount"
+        [totalPages]="result().totalPages"
+        (pageChange)="load($event, result().pageSize)"
+        (pageSizeChange)="load(1, $event)"
+      />
+    </div>
+  }
+
+  <!-- Hộp thoại chi tiết: giá trị cũ / mới dạng JSON -->
+  @if (detail(); as entry) {
+    <div class="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4">
+      <div class="sh-card max-h-[85vh] w-full max-w-3xl overflow-y-auto p-5">
+        <div class="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h2 class="sh-page-title">Nhật ký #{{ entry.id }}</h2>
+            <p class="mt-1 text-xs text-slate-500">
+              {{ entry.action }} · {{ entry.entityType }} #{{ entry.entityId }} ·
+              {{ formatMoment(entry.createdAt) }}
+            </p>
+          </div>
+          <button
+            type="button"
+            class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+            (click)="closeDetail()"
+          >
+            Đóng
+          </button>
+        </div>
+
+        <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+          <div class="rounded bg-slate-50 px-3 py-2">
+            <dt class="text-xs text-slate-500">Người thực hiện</dt>
+            <dd class="text-slate-800">{{ actorLabel(entry) }}</dd>
+          </div>
+          <div class="rounded bg-slate-50 px-3 py-2">
+            <dt class="text-xs text-slate-500">Chi nhánh</dt>
+            <dd class="text-slate-800">
+              {{ entry.branchId === null ? 'Toàn hệ thống' : '#' + entry.branchId }}
+            </dd>
+          </div>
+          <div class="rounded bg-slate-50 px-3 py-2">
+            <dt class="text-xs text-slate-500">Địa chỉ IP</dt>
+            <dd class="text-slate-800">{{ entry.ipAddress ?? '—' }}</dd>
+          </div>
+          <div class="rounded bg-slate-50 px-3 py-2">
+            <dt class="text-xs text-slate-500">Lý do</dt>
+            <dd class="text-slate-800">{{ entry.reason ?? '—' }}</dd>
+          </div>
+        </dl>
+
+        <div class="mt-4 grid gap-3 lg:grid-cols-2">
+          <div>
+            <h3 class="text-sm font-semibold text-slate-700">Giá trị TRƯỚC (oldValues)</h3>
+            <pre class="mt-1 max-h-64 overflow-auto rounded-md bg-slate-900 p-3 text-xs text-slate-100">{{
+              oldValuesText(entry)
+            }}</pre>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-slate-700">Giá trị SAU (newValues)</h3>
+            <pre class="mt-1 max-h-64 overflow-auto rounded-md bg-slate-900 p-3 text-xs text-slate-100">{{
+              newValuesText(entry)
+            }}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</section>

@@ -1,0 +1,394 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-center justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">{{ isEdit() ? 'Sửa sản phẩm' : 'Thêm sản phẩm' }}</h1>
+      <p class="text-sm text-slate-500">
+        @if (isEdit()) {
+          SKU và danh mục không đổi được sau khi tạo (đúng ràng buộc của backend).
+        } @else {
+          Chọn danh mục trước — bộ trường thông số kỹ thuật sẽ hiện theo loại danh mục.
+        }
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      @if (statusLabel(); as label) {
+        <span class="rounded-full px-2 py-1 text-xs font-medium" [class]="statusClass()">
+          {{ label }}
+        </span>
+      }
+      <a
+        routerLink="/admin/products"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        ← Danh sách
+      </a>
+    </div>
+  </header>
+
+  @if (apiError(); as error) {
+    <div class="sh-card border-l-4 border-l-rose-500 p-4 text-sm text-rose-800">
+      <p class="font-semibold">{{ error.message }}</p>
+      @if (error.detail) {
+        <p class="mt-0.5 text-xs">Mã lỗi: {{ error.detail }}</p>
+      }
+      @if (error.correlationId) {
+        <p class="mt-0.5 break-all font-mono text-[11px]">correlationId: {{ error.correlationId }}</p>
+      }
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tải sản phẩm…</div>
+  } @else {
+    <form class="space-y-4" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <!-- Thông tin chung -->
+      <div class="sh-card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+        <h2 class="text-sm font-semibold text-slate-700 sm:col-span-2 lg:col-span-3">
+          Thông tin chung
+        </h2>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700" for="sku">
+            SKU <span class="text-rose-600">*</span>
+          </label>
+          <input
+            id="sku"
+            type="text"
+            formControlName="sku"
+            [readOnly]="isEdit()"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-sm read-only:bg-slate-100"
+            [class.sh-input-invalid]="form.controls.sku.touched && form.controls.sku.invalid"
+          />
+          @if (form.controls.sku.touched && form.controls.sku.invalid) {
+            <p class="sh-field-error">
+              @if (form.controls.sku.errors?.['codeTaken']) {
+                SKU này đã tồn tại, hãy chọn mã khác.
+              } @else {
+                SKU là bắt buộc (tối đa 50 ký tự).
+              }
+            </p>
+          }
+          @if (serverError('sku'); as message) {
+            <p class="sh-field-error">{{ message }}</p>
+          }
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700" for="categoryId">
+            Danh mục <span class="text-rose-600">*</span>
+          </label>
+          <select
+            id="categoryId"
+            formControlName="categoryId"
+            [disabled]="isEdit()"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+          >
+            <option [ngValue]="null">-- Chọn danh mục --</option>
+            @for (category of categories(); track category.id) {
+              <option [ngValue]="category.id">{{ category.name }} ({{ category.code }})</option>
+            }
+          </select>
+          @if (form.controls.categoryId.touched && form.controls.categoryId.invalid) {
+            <p class="sh-field-error">Vui lòng chọn danh mục.</p>
+          }
+          @if (serverError('categoryId'); as message) {
+            <p class="sh-field-error">{{ message }}</p>
+          }
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700" for="brandId">
+            Thương hiệu <span class="text-rose-600">*</span>
+          </label>
+          <select
+            id="brandId"
+            formControlName="brandId"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          >
+            <option [ngValue]="null">-- Chọn thương hiệu --</option>
+            @for (brand of brands(); track brand.id) {
+              <option [ngValue]="brand.id">{{ brand.name }}</option>
+            }
+          </select>
+          @if (form.controls.brandId.touched && form.controls.brandId.invalid) {
+            <p class="sh-field-error">Vui lòng chọn thương hiệu.</p>
+          }
+          @if (serverError('brandId'); as message) {
+            <p class="sh-field-error">{{ message }}</p>
+          }
+        </div>
+
+        <div class="sm:col-span-2">
+          <label class="block text-sm font-medium text-slate-700" for="name">
+            Tên sản phẩm <span class="text-rose-600">*</span>
+          </label>
+          <input
+            id="name"
+            type="text"
+            formControlName="name"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            [class.sh-input-invalid]="form.controls.name.touched && form.controls.name.invalid"
+          />
+          @if (form.controls.name.touched && form.controls.name.invalid) {
+            <p class="sh-field-error">Tên sản phẩm là bắt buộc (tối đa 250 ký tự).</p>
+          }
+          @if (serverError('name'); as message) {
+            <p class="sh-field-error">{{ message }}</p>
+          }
+        </div>
+      </div>
+
+      <!-- Slug, trạng thái, giá và cờ quản lý -->
+      <div class="sh-card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="sm:col-span-2">
+          <label class="block text-sm font-medium text-slate-700" for="slug">
+            Slug (đường dẫn) <span class="text-rose-600">*</span>
+          </label>
+          <div class="mt-1 flex gap-2">
+            <input
+              id="slug"
+              type="text"
+              formControlName="slug"
+              class="w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-xs"
+              [class.sh-input-invalid]="form.controls.slug.touched && form.controls.slug.invalid"
+            />
+            <button
+              type="button"
+              class="whitespace-nowrap rounded-md border border-slate-300 px-2 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+              (click)="suggestSlug()"
+            >
+              Tạo từ tên
+            </button>
+          </div>
+          @if (form.controls.slug.touched && form.controls.slug.invalid) {
+            <p class="sh-field-error">
+              Slug chỉ gồm chữ thường, số và dấu gạch nối (ví dụ: cpu-amd-ryzen-7).
+            </p>
+          }
+          @if (serverError('slug'); as message) {
+            <p class="sh-field-error">{{ message }}</p>
+          }
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700" for="status">Trạng thái</label>
+          <select
+            id="status"
+            formControlName="status"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          >
+            @for (option of statusOptions; track option.value) {
+              <option [ngValue]="option.value">{{ option.label }}</option>
+            }
+          </select>
+          @if (isEdit()) {
+            <p class="mt-1 text-xs text-slate-500">
+              Trạng thái cũng có thể đổi nhanh ở màn hình danh sách.
+            </p>
+          }
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700" for="listPrice">
+            Giá niêm yết (VND) <span class="text-rose-600">*</span>
+          </label>
+          <input
+            id="listPrice"
+            type="number"
+            min="0"
+            step="1000"
+            formControlName="listPrice"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            [class.sh-input-invalid]="form.controls.listPrice.touched && form.controls.listPrice.invalid"
+          />
+          @if (form.controls.listPrice.touched && form.controls.listPrice.invalid) {
+            <p class="sh-field-error">Giá niêm yết là bắt buộc và phải ≥ 0 (VND, số nguyên).</p>
+          }
+          @if (serverError('listPrice'); as message) {
+            <p class="sh-field-error">{{ message }}</p>
+          }
+        </div>
+
+        @if (!isEdit()) {
+          <div>
+            <label class="block text-sm font-medium text-slate-700" for="lastImportPrice">
+              Giá nhập gần nhất (VND)
+            </label>
+            <input
+              id="lastImportPrice"
+              type="number"
+              min="0"
+              step="1000"
+              formControlName="lastImportPrice"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <p class="mt-1 text-xs text-slate-500">
+              Chỉ là giá tham khảo; giá vốn thực tế tính từ phiếu nhập kho.
+            </p>
+          </div>
+        }
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700" for="minStockDefault">
+            Tồn tối thiểu mặc định
+          </label>
+          <input
+            id="minStockDefault"
+            type="number"
+            min="0"
+            formControlName="minStockDefault"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700" for="warrantyMonths">
+            Bảo hành (tháng)
+          </label>
+          <input
+            id="warrantyMonths"
+            type="number"
+            min="0"
+            max="120"
+            formControlName="warrantyMonths"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div class="flex items-center gap-2 pt-6">
+          <input
+            id="requiresSerial"
+            type="checkbox"
+            formControlName="requiresSerial"
+            class="h-4 w-4 rounded border-slate-300"
+          />
+          <label class="text-sm text-slate-700" for="requiresSerial">Quản lý theo serial</label>
+        </div>
+      </div>
+
+      <!-- Mô tả -->
+      <div class="sh-card grid gap-4 p-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700" for="shortDescription">
+            Mô tả ngắn (tối đa 500 ký tự)
+          </label>
+          <input
+            id="shortDescription"
+            type="text"
+            formControlName="shortDescription"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700" for="description">Mô tả chi tiết</label>
+          <textarea
+            id="description"
+            rows="4"
+            formControlName="description"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          ></textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700" for="warrantyTerms">
+            Điều kiện bảo hành
+          </label>
+          <textarea
+            id="warrantyTerms"
+            rows="2"
+            formControlName="warrantyTerms"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Thông số kỹ thuật ĐỘNG theo SpecType của danh mục -->
+      <div class="sh-card p-4">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-sm font-semibold text-slate-700">Thông số kỹ thuật theo danh mục</h2>
+            <p class="text-xs text-slate-500">
+              Bộ trường hiện tại: <strong>{{ specTypeLabel() }}</strong>
+              @if (specType() === 0) {
+                — danh mục này chưa có bộ thông số riêng.
+              }
+            </p>
+          </div>
+        </div>
+
+        <app-spec-fields [group]="specs()" [specType]="specType()" legend="Thông số kỹ thuật" />
+      </div>
+
+      <!-- Ảnh sản phẩm (FormArray) -->
+      <div class="sh-card p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-sm font-semibold text-slate-700">Ảnh sản phẩm</h2>
+          <button
+            type="button"
+            class="rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+            (click)="addImage()"
+          >
+            + Thêm ảnh
+          </button>
+        </div>
+
+        @if (images.length === 0) {
+          <p class="mt-2 text-sm text-slate-500">Chưa có ảnh nào.</p>
+        } @else {
+          <div class="mt-3 space-y-2">
+            @for (group of images.controls; track $index) {
+              <div class="grid gap-2 sm:grid-cols-[1fr_8rem_8rem_auto]" [formGroup]="imageGroupAt($index)">
+                <input
+                  type="url"
+                  placeholder="https://..."
+                  formControlName="url"
+                  class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                />
+                <input
+                  type="number"
+                  placeholder="Thứ tự"
+                  formControlName="sortOrder"
+                  class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                />
+                <label class="flex items-center gap-2 text-sm text-slate-700">
+                  <input type="checkbox" formControlName="isPrimary" class="h-4 w-4 rounded border-slate-300" />
+                  Ảnh chính
+                </label>
+                <button
+                  type="button"
+                  class="rounded-md px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50"
+                  (click)="removeImage($index)"
+                >
+                  Xoá
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Nút lưu -->
+      <div class="sh-card flex flex-wrap items-center justify-between gap-3 p-4">
+        <p class="text-xs text-slate-500">
+          Nhấn F5 hoặc rời trang khi còn thay đổi chưa lưu sẽ được cảnh báo.
+        </p>
+        <div class="flex gap-2">
+          <a
+            routerLink="/admin/products"
+            class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+          >
+            Huỷ
+          </a>
+          <button
+            type="submit"
+            class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            [disabled]="submitting()"
+          >
+            {{ submitting() ? 'Đang lưu…' : isEdit() ? 'Lưu thay đổi' : 'Tạo sản phẩm' }}
+          </button>
+        </div>
+      </div>
+    </form>
+  }
+</section>

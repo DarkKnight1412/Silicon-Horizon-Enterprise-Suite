@@ -1,0 +1,111 @@
+<!-- Tiêu đề trang -->
+<section class="bg-slate-950 px-6 py-16">
+  <div class="mx-auto max-w-3xl text-center">
+    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-brand-300">Định hướng phát triển</p>
+    <h1 class="mt-3 text-3xl font-bold text-white sm:text-4xl">Lộ trình theo giai đoạn</h1>
+    <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
+      Apex Circuit Electronics không ngừng mở rộng để phục vụ khách hàng tốt hơn mỗi ngày — từ danh
+      mục sản phẩm, dịch vụ bảo hành đến trải nghiệm mua sắm.
+    </p>
+  </div>
+</section>
+
+<!-- Lộ trình các giai đoạn (dạng danh sách có đường thời gian) -->
+<section class="border-t border-white/10 bg-slate-900 px-6 py-16">
+  <div class="mx-auto max-w-3xl">
+    <ol class="relative space-y-8 border-l border-white/15 pl-8">
+      @for (item of phases; track item.phase) {
+        <li class="relative">
+          <span
+            class="absolute -left-[41px] top-1 grid h-6 w-6 place-items-center rounded-full bg-brand-600 text-[11px] font-semibold text-white"
+            aria-hidden="true"
+          >
+            {{ $index + 1 }}
+          </span>
+
+          <div class="rounded-xl border border-white/10 bg-slate-950/60 p-6">
+            <div class="flex flex-wrap items-center gap-3">
+              <p class="text-xs font-semibold uppercase tracking-widest text-brand-300">
+                {{ item.phase }}
+              </p>
+              <span class="rounded-full border border-white/20 px-2.5 py-0.5 text-[11px] text-slate-300">
+                {{ item.status }}
+              </span>
+            </div>
+
+            <h2 class="mt-3 text-lg font-semibold text-white">{{ item.title }}</h2>
+            <p class="mt-2 text-sm leading-relaxed text-slate-300">{{ item.description }}</p>
+
+            <ul class="mt-4 space-y-2 text-sm text-slate-300">
+              @for (point of item.points; track point) {
+                <li class="flex gap-3">
+                  <span class="text-brand-400" aria-hidden="true">✓</span>
+                  <span>{{ point }}</span>
+                </li>
+              }
+            </ul>
+          </div>
+        </li>
+      }
+    </ol>
+  </div>
+</section>
+
+<!-- Thông tin + hình ảnh minh hoạ -->
+<section class="border-t border-white/10 bg-slate-950 px-6 py-16">
+  <div class="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2">
+    <div>
+      <h2 class="text-2xl font-semibold text-white">Chúng tôi không ngừng nâng cấp</h2>
+      <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
+        Từ chất lượng phục vụ đến danh mục sản phẩm, chúng tôi luôn cải thiện để bạn yên tâm mua sắm.
+        Mọi cam kết về hàng chính hãng, giá minh bạch và hỗ trợ kỹ thuật đều được giữ đúng.
+      </p>
+      <ul class="mt-6 space-y-3 text-sm text-slate-300">
+        <li class="flex gap-3">
+          <span class="text-brand-400" aria-hidden="true">✓</span>
+          <span>Hàng chính hãng, nguồn gốc rõ ràng và đầy đủ bảo hành.</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="text-brand-400" aria-hidden="true">✓</span>
+          <span>Giá cập nhật thường xuyên, ưu đãi cho khách sỉ và đại lý.</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="text-brand-400" aria-hidden="true">✓</span>
+          <span>Hỗ trợ nhanh tại cửa hàng và qua kênh trực tuyến.</span>
+        </li>
+      </ul>
+    </div>
+
+    <figure class="overflow-hidden rounded-xl border border-white/10">
+      <img
+        src="/images/anh_dev.webp"
+        alt="Linh kiện máy tính tại Apex Circuit Electronics"
+        class="h-64 w-full object-cover sm:h-80"
+      />
+    </figure>
+  </div>
+</section>
+
+<!-- Kêu gọi hành động -->
+<section class="border-t border-white/10 bg-slate-900 px-6 py-16">
+  <div class="mx-auto max-w-3xl text-center">
+    <h2 class="text-2xl font-semibold text-white sm:text-3xl">Trở thành khách hàng của chúng tôi</h2>
+    <p class="mt-3 text-sm text-slate-300">
+      Đăng nhập để xem giá, đặt hàng và theo dõi đơn; hoặc tạo tài khoản chỉ trong một phút.
+    </p>
+    <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+      <a
+        routerLink="/login"
+        class="rounded-md bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-brand-700"
+      >
+        Đăng nhập
+      </a>
+      <a
+        routerLink="/register"
+        class="rounded-md border border-white/40 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+      >
+        Đăng ký tài khoản
+      </a>
+    </div>
+  </div>
+</section>

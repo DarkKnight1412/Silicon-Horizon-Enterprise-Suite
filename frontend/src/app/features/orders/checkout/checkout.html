@@ -1,0 +1,337 @@
+<section class="space-y-4">
+  <header>
+    <h1 class="sh-page-title">Đặt hàng</h1>
+    <p class="text-sm text-slate-500">
+      Đơn đặt từ {{ totals().selectedCount }} dòng đang chọn trong giỏ hàng.
+    </p>
+  </header>
+
+  @if (apiError(); as error) {
+    <div class="sh-card border-l-4 border-l-rose-500 p-4 text-sm text-rose-800">
+      <p class="font-semibold">{{ error.message }}</p>
+      @if (error.detail) {
+        <p class="mt-0.5 text-xs">Mã lỗi: {{ error.detail }}</p>
+      }
+      @if (error.correlationId) {
+        <p class="mt-0.5 break-all font-mono text-[11px]">correlationId: {{ error.correlationId }}</p>
+      }
+    </div>
+  }
+
+  @if (totals().selectedCount === 0) {
+    <div class="sh-card p-6 text-sm text-slate-600">
+      Chưa có dòng nào được chọn trong giỏ hàng.
+      <a routerLink="/cart" class="font-medium text-brand-700 hover:underline">Quay lại giỏ hàng</a>
+    </div>
+  } @else {
+    <form class="grid gap-4 lg:grid-cols-3" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="sh-card space-y-4 p-4 lg:col-span-2">
+        <h2 class="text-sm font-semibold text-slate-700">Thông tin nhận hàng</h2>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-slate-700">
+              Chi nhánh xuất hàng / nhận hàng <span class="text-rose-600">*</span>
+            </label>
+
+            <!-- LOOKUP chi nhánh: gõ để lọc theo tên/mã, bấm "Chọn" ở danh sách bên dưới -->
+            <input
+              id="branchLookup"
+              type="search"
+              placeholder="Tìm theo tên hoặc mã chi nhánh…"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              [class.sh-input-invalid]="
+                form.controls.branchId.touched && form.controls.branchId.invalid
+              "
+              [formControl]="branchKeyword"
+            />
+
+            <p class="mt-1 text-xs text-slate-500">
+              @if (branchLoading()) {
+                Đang kiểm tra tồn kho của các sản phẩm đang chọn…
+              } @else {
+                {{ branchMatches().length }} chi nhánh còn hàng cho các sản phẩm đang chọn.
+              }
+            </p>
+
+            @if (branchLabel().length > 0) {
+              <p class="mt-1 text-xs font-medium text-emerald-700">Đã chọn: {{ branchLabel() }}</p>
+            }
+
+            @if (form.controls.branchId.touched && form.controls.branchId.invalid) {
+              <p class="sh-field-error">Vui lòng chọn chi nhánh.</p>
+            }
+            @if (fieldError('branchId'); as message) {
+              <p class="sh-field-error">{{ message }}</p>
+            }
+
+            <ul
+              class="mt-2 max-h-56 divide-y divide-slate-100 overflow-y-auto rounded-md border border-slate-200"
+            >
+              @for (branch of branchMatches(); track branch.branchId) {
+                <li class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                  <div class="min-w-0">
+                    <p class="truncate font-medium text-slate-800">{{ branch.branchName }}</p>
+                    <p class="text-xs text-slate-500">Mã chi nhánh: {{ branch.branchId }}</p>
+                  </div>
+                  <span
+                    class="shrink-0 text-xs"
+                    [class]="
+                      branch.coveredCount === selectedLineCount()
+                        ? 'text-emerald-700'
+                        : 'text-amber-700'
+                    "
+                  >
+                    {{ branch.coveredCount }}/{{ selectedLineCount() }} sản phẩm
+                  </span>
+                  <button
+                    type="button"
+                    class="shrink-0 rounded-md bg-brand-600 px-3 py-1 text-xs font-medium text-white transition hover:bg-brand-700"
+                    (click)="chooseBranch(branch)"
+                  >
+                    Chọn
+                  </button>
+                </li>
+              } @empty {
+                <li class="px-3 py-3 text-xs text-slate-500">
+                  @if (branchLoading()) {
+                    Đang tải…
+                  } @else {
+                    Không có chi nhánh nào khớp — thử từ khoá khác, hoặc nhập mã chi nhánh bên dưới.
+                  }
+                </li>
+              }
+            </ul>
+
+            <!-- Đường dự phòng khi khách không thấy chi nhánh mong muốn -->
+            <div class="mt-2 flex items-center gap-2">
+              <label class="shrink-0 text-xs text-slate-500" for="manualBranchId">Hoặc nhập mã:</label>
+              <input
+                id="manualBranchId"
+                type="number"
+                min="1"
+                placeholder="VD: 1"
+                class="w-28 rounded-md border border-slate-300 px-2 py-1 text-xs"
+                [formControl]="manualBranchId"
+              />
+              <button
+                type="button"
+                class="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                (click)="applyManualBranch()"
+              >
+                Áp dụng
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700" for="fulfillmentType">
+              Hình thức nhận hàng
+            </label>
+            <select
+              id="fulfillmentType"
+              formControlName="fulfillmentType"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            >
+              @for (option of fulfillmentOptions; track option.value) {
+                <option [ngValue]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label class="block text-sm font-medium text-slate-700" for="recipientName">
+              Tên người nhận
+              @if (isDelivery()) {
+                <span class="text-rose-600">*</span>
+              }
+            </label>
+            <input
+              id="recipientName"
+              type="text"
+              formControlName="recipientName"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              [class.sh-input-invalid]="form.controls.recipientName.touched && form.controls.recipientName.invalid"
+            />
+            @if (form.controls.recipientName.touched && form.controls.recipientName.invalid) {
+              <p class="sh-field-error">Vui lòng nhập tên người nhận.</p>
+            }
+            @if (fieldError('recipientName'); as message) {
+              <p class="sh-field-error">{{ message }}</p>
+            }
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700" for="recipientPhone">
+              Số điện thoại
+              @if (isDelivery()) {
+                <span class="text-rose-600">*</span>
+              }
+            </label>
+            <input
+              id="recipientPhone"
+              type="tel"
+              inputmode="tel"
+              formControlName="recipientPhone"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              [class.sh-input-invalid]="form.controls.recipientPhone.touched && form.controls.recipientPhone.invalid"
+            />
+            @if (form.controls.recipientPhone.touched && form.controls.recipientPhone.invalid) {
+              <p class="sh-field-error">
+                @if (form.controls.recipientPhone.errors?.['required']) {
+                  Vui lòng nhập số điện thoại người nhận.
+                } @else {
+                  Số điện thoại không hợp lệ (dạng 0xxxxxxxxx hoặc +84xxxxxxxxx).
+                }
+              </p>
+            }
+            @if (fieldError('recipientPhone'); as message) {
+              <p class="sh-field-error">{{ message }}</p>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="sh-card space-y-4 p-4 lg:col-span-2">
+        <h2 class="text-sm font-semibold text-slate-700">Thanh toán &amp; ghi chú</h2>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label class="block text-sm font-medium text-slate-700" for="paymentMethod">
+              Phương thức thanh toán
+            </label>
+            <select
+              id="paymentMethod"
+              formControlName="paymentMethod"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            >
+              @for (option of paymentOptions; track option.value) {
+                <option [ngValue]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700" for="shippingFee">
+              Phí vận chuyển (VND)
+            </label>
+            <input
+              id="shippingFee"
+              type="number"
+              min="0"
+              step="1000"
+              formControlName="shippingFee"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              [class.sh-input-invalid]="form.controls.shippingFee.touched && form.controls.shippingFee.invalid"
+            />
+            @if (form.controls.shippingFee.touched && form.controls.shippingFee.invalid) {
+              <p class="sh-field-error">Phí vận chuyển phải là số không âm.</p>
+            }
+            @if (fieldError('shippingFee'); as message) {
+              <p class="sh-field-error">{{ message }}</p>
+            }
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700" for="voucherCode">
+            Mã giảm giá
+          </label>
+          <div class="mt-1 flex gap-2">
+            <input
+              id="voucherCode"
+              type="text"
+              placeholder="Ví dụ: WELCOME10"
+              formControlName="voucherCode"
+              class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm uppercase"
+            />
+            <button
+              type="button"
+              class="whitespace-nowrap rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              [disabled]="voucherChecking()"
+              (click)="checkVoucher()"
+            >
+              {{ voucherChecking() ? 'Đang kiểm tra…' : 'Kiểm tra mã' }}
+            </button>
+          </div>
+
+          @if (voucherResult(); as voucher) {
+            <p
+              class="mt-2 rounded-md px-3 py-2 text-sm"
+              [class]="voucher.isValid ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900'"
+            >
+              @if (voucher.isValid) {
+                Mã hợp lệ — giảm {{ formatPrice(voucher.discountAmount) }}.
+              } @else {
+                Mã chưa dùng được: {{ voucher.message ?? 'không rõ lý do' }}
+              }
+            </p>
+            <p class="mt-1 text-xs text-slate-500">
+              Hệ thống vẫn kiểm tra lại khi đặt hàng; voucher đủ điều kiện sẽ được áp dụng tự động.
+            </p>
+          }
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700" for="note">
+            Ghi chú cho cửa hàng
+          </label>
+          <textarea
+            id="note"
+            rows="2"
+            formControlName="note"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Tóm tắt: chỉ là TẠM TÍNH, backend chốt lại giá và voucher khi tạo đơn -->
+      <aside class="sh-card h-fit p-4">
+        <h2 class="text-sm font-semibold text-slate-700">Tóm tắt đơn (tạm tính)</h2>
+
+        <ul class="mt-3 space-y-1 text-sm">
+          @for (item of items(); track item.productId) {
+            @if (item.isSelected) {
+              <li class="flex justify-between gap-2">
+                <span class="min-w-0 flex-1 truncate text-slate-600">
+                  {{ item.name }} × {{ item.quantity }}
+                </span>
+                <span class="whitespace-nowrap text-slate-800">{{ formatPrice(item.lineTotal) }}</span>
+              </li>
+            }
+          }
+        </ul>
+
+        <dl class="mt-3 space-y-2 border-t border-slate-200 pt-3 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Tạm tính</dt>
+            <dd class="text-slate-800">{{ formatPrice(totals().subTotal) }}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Giảm giá sản phẩm</dt>
+            <dd class="text-emerald-700">−{{ formatPrice(totals().discountTotal) }}</dd>
+          </div>
+          <div class="flex justify-between border-t border-slate-200 pt-2 text-base font-semibold">
+            <dt>Tổng cộng</dt>
+            <dd class="text-brand-700">{{ formatPrice(totals().total) }}</dd>
+          </div>
+        </dl>
+
+        <button
+          type="submit"
+          class="mt-4 w-full rounded-md bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+          [disabled]="!canSubmit()"
+        >
+          {{ submitting() ? 'Đang đặt hàng…' : 'Xác nhận đặt hàng' }}
+        </button>
+
+        <p class="mt-2 text-xs text-slate-500">
+          Sau khi đặt, các dòng đã mua sẽ được xoá khỏi giỏ và đơn xuất hiện trong mục "Đơn hàng của tôi".
+        </p>
+      </aside>
+    </form>
+
+  }
+</section>

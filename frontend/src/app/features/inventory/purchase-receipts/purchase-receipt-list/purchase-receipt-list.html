@@ -1,0 +1,146 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Phiếu nhập kho</h1>
+      <p class="text-sm text-slate-500">{{ result().totalCount }} phiếu · chi nhánh lấy từ tài khoản đăng nhập</p>
+    </div>
+    <div class="flex gap-2">
+      <a
+        routerLink="/inventory/stock"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        ← Tồn kho
+      </a>
+      <a
+        routerLink="/inventory/receipts/new"
+        class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+      >
+        + Tạo phiếu nhập
+      </a>
+    </div>
+  </header>
+
+  <form
+    class="sh-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4"
+    [formGroup]="filters"
+    (ngSubmit)="load(1, result().pageSize)"
+    novalidate
+  >
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="supplierId">Nhà cung cấp</label>
+      <select
+        id="supplierId"
+        formControlName="supplierId"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      >
+        <option [ngValue]="null">Tất cả nhà cung cấp</option>
+        @for (supplier of suppliers(); track supplier.id) {
+          <option [ngValue]="supplier.id">{{ supplier.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="fromDate">Từ ngày nhận</label>
+      <input
+        id="fromDate"
+        type="date"
+        formControlName="fromDate"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="toDate">Đến ngày nhận</label>
+      <input
+        id="toDate"
+        type="date"
+        formControlName="toDate"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    @if (filters.errors?.['dateRange']; as rangeError) {
+      <p class="sh-field-error lg:col-span-3">{{ rangeError.message }}</p>
+    }
+
+    <div class="flex items-end gap-2">
+      <button
+        type="submit"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+      >
+        Lọc
+      </button>
+      <button
+        type="button"
+        class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+        (click)="resetFilters()"
+      >
+        Xoá lọc
+      </button>
+    </div>
+  </form>
+
+  @if (loading()) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tải phiếu nhập…</div>
+  } @else if (result().items.length === 0) {
+    <div class="sh-card">
+      <app-empty-state
+        icon="🧾"
+        title="Chưa có phiếu nhập nào"
+        description="Phiếu nhập kho sẽ xuất hiện ở đây sau khi thủ kho tạo phiếu."
+      />
+    </div>
+  } @else {
+    <div class="sh-card overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-3 py-2">Mã phiếu</th>
+            <th class="px-3 py-2">Nhà cung cấp</th>
+            <th class="px-3 py-2">Nhận lúc</th>
+            <th class="px-3 py-2">Trạng thái</th>
+            <th class="px-3 py-2 text-right">Tổng tiền</th>
+            <th class="px-3 py-2 text-right"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (receipt of result().items; track receipt.id) {
+            <tr>
+              <td class="px-3 py-2 font-mono text-slate-800">{{ receipt.receiptCode }}</td>
+              <td class="px-3 py-2 text-slate-700">{{ receipt.supplierName }}</td>
+              <td class="px-3 py-2 text-slate-600">{{ formatMoment(receipt.receivedAt) }}</td>
+              <td class="px-3 py-2">
+                <span class="rounded-full px-2 py-1 text-xs font-medium" [class]="statusClass(receipt.status)">
+                  {{ statusLabel(receipt.status) }}
+                </span>
+              </td>
+              <td class="px-3 py-2 text-right font-medium text-slate-800">
+                {{ formatPrice(receipt.totalAmount) }}
+              </td>
+              <td class="px-3 py-2 text-right">
+                <a
+                  class="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                  [routerLink]="['/inventory/receipts', receipt.id]"
+                >
+                  Chi tiết
+                </a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sh-card">
+      <app-pagination
+        [pageNumber]="result().pageNumber"
+        [pageSize]="result().pageSize"
+        [totalCount]="result().totalCount"
+        [totalPages]="result().totalPages"
+        (pageChange)="load($event, result().pageSize)"
+        (pageSizeChange)="load(1, $event)"
+      />
+    </div>
+  }
+</section>

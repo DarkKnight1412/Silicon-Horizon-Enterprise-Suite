@@ -1,0 +1,125 @@
+<!-- ===== Khối hero: một ảnh lớn làm NỀN cho toàn bộ khối ===== -->
+<section
+  class="relative flex min-h-[calc(100vh-var(--sh-header-height))] items-center justify-center bg-cover bg-center bg-no-repeat"
+  [style.background-image]="heroBackground"
+>
+  <!-- Lớp phủ tối giúp chữ trắng nổi rõ trên ảnh nền -->
+  <div class="absolute inset-0 bg-slate-950/70"></div>
+
+  <div class="relative z-10 mx-auto max-w-3xl px-6 py-16 text-center">
+    <img src="/icons/logo.png" alt="Apex Circuit Electronics" class="mx-auto h-16 w-16" />
+    <p class="mt-4 text-sm font-semibold uppercase tracking-[0.2em] text-brand-300">
+      Apex Circuit Electronics
+    </p>
+    <h1 class="mt-3 text-3xl font-bold leading-tight text-white sm:text-5xl">
+      Linh kiện máy tính chính hãng cho mọi cấu hình
+    </h1>
+    <p class="mx-auto mt-4 max-w-2xl text-base text-slate-200 sm:text-lg">
+      CPU, RAM, SSD, màn hình, mainboard, VGA và phụ kiện từ các thương hiệu uy tín. Giá cạnh tranh,
+      bảo hành tận tâm và giao hàng toàn quốc.
+    </p>
+
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a
+        routerLink="/login"
+        class="rounded-md bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-brand-700"
+      >
+        Đăng nhập để mua sắm
+      </a>
+      <a
+        routerLink="/about"
+        class="rounded-md border border-white/40 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+      >
+        Về chúng tôi
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Khối giới thiệu: thông tin + hình ảnh ===== -->
+<section class="bg-slate-950 px-6 py-16">
+  <div class="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2">
+    <div>
+      <h2 class="text-2xl font-semibold text-white sm:text-3xl">Vì sao chọn chúng tôi?</h2>
+      <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
+        Chúng tôi cung cấp linh kiện máy tính chính hãng cho khách lẻ và đại lý: từ CPU, RAM, ổ cứng
+        đến màn hình, mainboard và phụ kiện. Mỗi sản phẩm đều có nguồn gốc rõ ràng, giá niêm yết minh
+        bạch và được bảo hành đầy đủ.
+      </p>
+      <ul class="mt-6 space-y-3 text-sm text-slate-300">
+        <li class="flex gap-3">
+          <span class="text-brand-400" aria-hidden="true">✓</span>
+          <span>Hàng chính hãng, đầy đủ hoá đơn và chế độ bảo hành.</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="text-brand-400" aria-hidden="true">✓</span>
+          <span>Giá cạnh tranh, ưu đãi riêng cho khách sỉ và đại lý.</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="text-brand-400" aria-hidden="true">✓</span>
+          <span>Tư vấn chọn linh kiện tương thích, đúng nhu cầu và ngân sách.</span>
+        </li>
+      </ul>
+      <a
+        routerLink="/about"
+        class="mt-8 inline-block rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700"
+      >
+        Tìm hiểu về chúng tôi
+      </a>
+    </div>
+
+    <figure class="overflow-hidden rounded-xl border border-white/10">
+      <img
+        src="/images/anh_nne.webp"
+        alt="Không gian linh kiện điện tử của Apex Circuit Electronics"
+        class="h-64 w-full object-cover sm:h-80"
+      />
+    </figure>
+  </div>
+</section>
+
+<!-- ===== Khối điểm nổi bật: các thẻ thông tin + biểu tượng ===== -->
+<section class="border-t border-white/10 bg-slate-900 px-6 py-16">
+  <div class="mx-auto max-w-6xl">
+    <h2 class="text-center text-2xl font-semibold text-white sm:text-3xl">Cam kết với khách hàng</h2>
+    <p class="mx-auto mt-3 max-w-2xl text-center text-sm text-slate-300">
+      Chúng tôi làm việc để bạn yên tâm chọn đúng linh kiện, đúng giá và luôn được hỗ trợ sau khi mua.
+    </p>
+
+    <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      @for (item of highlights; track item.title) {
+        <article class="rounded-xl border border-white/10 bg-slate-950/60 p-6">
+          <p class="text-3xl" aria-hidden="true">{{ item.icon }}</p>
+          <h3 class="mt-4 text-base font-semibold text-white">{{ item.title }}</h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate-300">{{ item.description }}</p>
+        </article>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- ===== Khối kêu gọi hành động ===== -->
+<section class="border-t border-white/10 bg-slate-950 px-6 py-16">
+  <div class="mx-auto max-w-3xl text-center">
+    <h2 class="text-2xl font-semibold text-white sm:text-3xl">
+      Cần tìm linh kiện cho chiếc máy của bạn?
+    </h2>
+    <p class="mt-3 text-sm text-slate-300">
+      Đăng nhập để xem giá, đặt hàng và theo dõi đơn; hoặc tạo tài khoản chỉ trong một phút.
+    </p>
+    <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+      <a
+        routerLink="/login"
+        class="rounded-md bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-brand-700"
+      >
+        Đăng nhập
+      </a>
+      <a
+        routerLink="/register"
+        class="rounded-md border border-white/40 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+      >
+        Đăng ký tài khoản
+      </a>
+    </div>
+  </div>
+</section>

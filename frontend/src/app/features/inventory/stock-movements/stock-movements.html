@@ -1,0 +1,158 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Thẻ kho</h1>
+      <p class="text-sm text-slate-500">
+        Sổ biến động tồn (chỉ đọc — bảng append-only).
+        @if (branchId !== null) {
+          Chi nhánh #{{ branchId }}.
+        } @else {
+          Tài khoản chưa gắn chi nhánh nên thẻ kho có thể bị từ chối (403).
+        }
+      </p>
+    </div>
+    <a
+      routerLink="/inventory/stock"
+      class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+    >
+      ← Tồn kho
+    </a>
+  </header>
+
+  <div class="sh-card space-y-3 p-4">
+    <app-product-picker
+      [keyword]="productKeyword"
+      [results]="productResults()"
+      [searching]="searching()"
+      [searched]="searched()"
+      (search)="searchProducts()"
+      (picked)="pickProduct($event)"
+    />
+
+    @if (selectedProduct(); as product) {
+      <div class="flex flex-wrap items-center justify-between gap-2 rounded-md bg-slate-50 px-3 py-2">
+        <div>
+          <p class="text-sm font-medium text-slate-800">{{ product.name }}</p>
+          <p class="font-mono text-xs text-slate-500">{{ product.sku }}</p>
+        </div>
+        <button
+          type="button"
+          class="rounded-md border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-white"
+          (click)="clearProduct()"
+        >
+          Đổi sản phẩm
+        </button>
+      </div>
+    }
+  </div>
+
+  @if (selectedProduct() !== null) {
+    <form
+      class="sh-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4"
+      [formGroup]="filters"
+      (ngSubmit)="load(1, result().pageSize)"
+      novalidate
+    >
+      <div>
+        <label class="block text-sm font-medium text-slate-700" for="fromDate">Từ ngày</label>
+        <input
+          id="fromDate"
+          type="date"
+          formControlName="fromDate"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700" for="toDate">Đến ngày</label>
+        <input
+          id="toDate"
+          type="date"
+          formControlName="toDate"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        />
+      </div>
+
+      @if (filters.errors?.['dateRange']; as rangeError) {
+        <p class="sh-field-error sm:col-span-2">{{ rangeError.message }}</p>
+      }
+
+      <div class="flex items-end gap-2">
+        <button
+          type="submit"
+          class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+        >
+          Xem thẻ kho
+        </button>
+        <button
+          type="button"
+          class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+          (click)="resetFilters()"
+        >
+          Xoá lọc
+        </button>
+      </div>
+    </form>
+
+    @if (loading()) {
+      <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tải thẻ kho…</div>
+    } @else if (result().items.length === 0) {
+      <div class="sh-card">
+        <app-empty-state
+          icon="📒"
+          title="Chưa có bút toán nào"
+          description="Thẻ kho trống khi sản phẩm chưa phát sinh nhập/xuất trong khoảng thời gian đã chọn."
+        />
+      </div>
+    } @else {
+      <div class="sh-card overflow-x-auto">
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <tr>
+              <th class="px-3 py-2">Thời điểm</th>
+              <th class="px-3 py-2">Loại bút toán</th>
+              <th class="px-3 py-2 text-right">Thực tế</th>
+              <th class="px-3 py-2 text-right">Đang giữ</th>
+              <th class="px-3 py-2">Chứng từ</th>
+              <th class="px-3 py-2">Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (row of result().items; track row.id) {
+              <tr>
+                <td class="px-3 py-2 text-slate-600">{{ formatMoment(row.createdAt) }}</td>
+                <td class="px-3 py-2 font-medium text-slate-800">
+                  {{ movementLabel(row.movementType) }}
+                </td>
+                <td
+                  class="px-3 py-2 text-right font-medium"
+                  [class]="row.physicalDelta < 0 ? 'text-rose-700' : 'text-emerald-700'"
+                >
+                  {{ row.physicalDelta > 0 ? '+' : '' }}{{ formatQuantity(row.physicalDelta) }}
+                </td>
+                <td class="px-3 py-2 text-right text-slate-600">
+                  {{ row.reservedDelta > 0 ? '+' : '' }}{{ formatQuantity(row.reservedDelta) }}
+                </td>
+                <td class="px-3 py-2 text-slate-600">
+                  {{ row.refType }} #{{ row.refId }}
+                </td>
+                <td class="px-3 py-2 text-slate-500">{{ row.note ?? '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="sh-card">
+        <app-pagination
+          [pageNumber]="result().pageNumber"
+          [pageSize]="result().pageSize"
+          [totalCount]="result().totalCount"
+          [totalPages]="result().totalPages"
+          (pageChange)="load($event, result().pageSize)"
+          (pageSizeChange)="load(1, $event)"
+        />
+      </div>
+    }
+  }
+</section>

@@ -1,0 +1,256 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Báo cáo doanh thu</h1>
+      <p class="text-sm text-slate-500">
+        Doanh thu, hoàn tiền, giá vốn và lợi nhuận gộp · khoảng ngày theo giờ Việt Nam (bao gồm ngày
+        kết thúc) · không tính phí vận chuyển.
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2 text-sm">
+      <a routerLink="/reports/inventory" class="rounded-md border border-slate-300 px-3 py-1.5 text-slate-700 hover:bg-slate-50">
+        Tồn kho
+      </a>
+      <a routerLink="/reports/serial-status" class="rounded-md border border-slate-300 px-3 py-1.5 text-slate-700 hover:bg-slate-50">
+        Serial
+      </a>
+      <a routerLink="/reports/warranty" class="rounded-md border border-slate-300 px-3 py-1.5 text-slate-700 hover:bg-slate-50">
+        Bảo hành
+      </a>
+    </div>
+  </header>
+
+  <form
+    class="sh-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4"
+    [formGroup]="filters"
+    (ngSubmit)="load()"
+    novalidate
+  >
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="fromDate">
+        Từ ngày <span class="text-rose-600">*</span>
+      </label>
+      <input
+        id="fromDate"
+        type="date"
+        formControlName="fromDate"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="toDate">
+        Đến ngày <span class="text-rose-600">*</span>
+      </label>
+      <input
+        id="toDate"
+        type="date"
+        formControlName="toDate"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="groupBy">Gộp theo</label>
+      <select
+        id="groupBy"
+        formControlName="groupBy"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      >
+        @for (option of groupByOptions; track option.value) {
+          <option [ngValue]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+
+    @if (isAdmin()) {
+      <app-report-branch-select
+        [control]="branchId"
+        [branches]="branches()"
+        controlId="revenueBranchId"
+      />
+    }
+
+    @if (filters.errors?.['dateRange']; as rangeError) {
+      <p class="sh-field-error lg:col-span-3">{{ rangeError.message }}</p>
+    }
+
+    <div class="flex items-end gap-2">
+      <button
+        type="submit"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+      >
+        Xem báo cáo
+      </button>
+      <button
+        type="button"
+        class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+        (click)="resetFilters()"
+      >
+        Mặc định
+      </button>
+    </div>
+  </form>
+
+  @if (loading()) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tổng hợp doanh thu…</div>
+  } @else if (report(); as data) {
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div class="sh-card p-4">
+        <p class="text-xs uppercase text-slate-500">Số đơn hoàn tất</p>
+        <p class="mt-1 text-lg font-semibold text-slate-800">{{ formatCount(totals().orders) }}</p>
+      </div>
+      <div class="sh-card p-4">
+        <p class="text-xs uppercase text-slate-500">Doanh thu gộp</p>
+        <p class="mt-1 text-lg font-semibold text-slate-800">
+          {{ formatPrice(totals().grossRevenue) }}
+        </p>
+      </div>
+      <div class="sh-card p-4">
+        <p class="text-xs uppercase text-slate-500">Hoàn tiền</p>
+        <p class="mt-1 text-lg font-semibold text-rose-700">{{ formatPrice(totals().refunds) }}</p>
+      </div>
+      <div class="sh-card p-4">
+        <p class="text-xs uppercase text-slate-500">Doanh thu thuần</p>
+        <p class="mt-1 text-lg font-semibold text-slate-800">
+          {{ formatPrice(totals().netRevenue) }}
+        </p>
+      </div>
+      <div class="sh-card p-4">
+        <p class="text-xs uppercase text-slate-500">Lợi nhuận gộp</p>
+        <p
+          class="mt-1 text-lg font-semibold"
+          [class]="totals().grossProfit < 0 ? 'text-rose-700' : 'text-emerald-700'"
+        >
+          {{ formatPrice(totals().grossProfit) }}
+        </p>
+      </div>
+    </div>
+
+    <p class="text-xs text-slate-500">
+      Kỳ báo cáo: {{ data.fromDate }} → {{ data.toDate }} · gộp theo
+      <strong>{{ data.groupBy }}</strong> · phạm vi:
+      {{ data.branchId === null ? 'toàn hệ thống' : 'chi nhánh #' + data.branchId }}
+    </p>
+
+    @if (data.groupBy === 'category') {
+      <div class="sh-card overflow-x-auto">
+        <h2 class="px-3 py-2 text-sm font-semibold text-slate-700">Doanh thu theo danh mục</h2>
+        @if (data.categories.length === 0) {
+          <app-empty-state
+            icon="📊"
+            title="Không có dữ liệu doanh thu trong kỳ này"
+            description="Thử nới khoảng ngày hoặc đổi cách gộp."
+          />
+        } @else {
+          <table class="min-w-full divide-y divide-slate-200 text-sm">
+            <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+              <tr>
+                <th class="px-3 py-2">Danh mục</th>
+                <th class="px-3 py-2 text-right">Số lượng bán</th>
+                <th class="px-3 py-2 text-right">Doanh thu</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              @for (row of data.categories; track row.categoryId) {
+                <tr>
+                  <td class="px-3 py-2 text-slate-800">{{ row.categoryName }}</td>
+                  <td class="px-3 py-2 text-right text-slate-700">
+                    {{ formatCount(row.quantity) }}
+                  </td>
+                  <td class="px-3 py-2 text-right font-medium text-slate-800">
+                    {{ formatPrice(row.revenue) }}
+                  </td>
+                </tr>
+              }
+              <tr class="bg-slate-50 font-semibold">
+                <td class="px-3 py-2 text-slate-800">Tổng cộng</td>
+                <td class="px-3 py-2 text-right text-slate-800">
+                  {{ formatCount(categoryTotals().quantity) }}
+                </td>
+                <td class="px-3 py-2 text-right text-slate-900">
+                  {{ formatPrice(categoryTotals().revenue) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        }
+      </div>
+    } @else {
+      <div class="sh-card overflow-x-auto">
+        <h2 class="px-3 py-2 text-sm font-semibold text-slate-700">Doanh thu chi tiết theo nhóm</h2>
+        @if (data.groups.length === 0) {
+          <app-empty-state
+            icon="📊"
+            title="Không có dữ liệu doanh thu trong kỳ này"
+            description="Thử nới khoảng ngày hoặc đổi cách gộp."
+          />
+        } @else {
+          <table class="min-w-full divide-y divide-slate-200 text-sm">
+            <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+              <tr>
+                <th class="px-3 py-2">Nhóm</th>
+                <th class="px-3 py-2 text-right">Số đơn</th>
+                <th class="px-3 py-2 text-right">Doanh thu gộp</th>
+                <th class="px-3 py-2 text-right">Hoàn tiền</th>
+                <th class="px-3 py-2 text-right">Thuần</th>
+                <th class="px-3 py-2 text-right">Giá vốn</th>
+                <th class="px-3 py-2 text-right">Lợi nhuận gộp</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              @for (row of data.groups; track row.groupKey) {
+                <tr>
+                  <td class="px-3 py-2 font-medium text-slate-800">
+                    {{ groupKeyLabel(row.groupKey) }}
+                  </td>
+                  <td class="px-3 py-2 text-right text-slate-700">{{ formatCount(row.orders) }}</td>
+                  <td class="px-3 py-2 text-right text-slate-700">
+                    {{ formatPrice(row.grossRevenue) }}
+                  </td>
+                  <td class="px-3 py-2 text-right text-rose-700">{{ formatPrice(row.refunds) }}</td>
+                  <td class="px-3 py-2 text-right text-slate-700">
+                    {{ formatPrice(row.netRevenue) }}
+                  </td>
+                  <td class="px-3 py-2 text-right text-slate-700">{{ formatPrice(row.cost) }}</td>
+                  <td
+                    class="px-3 py-2 text-right font-medium"
+                    [class]="row.grossProfit < 0 ? 'text-rose-700' : 'text-emerald-700'"
+                  >
+                    {{ formatPrice(row.grossProfit) }}
+                  </td>
+                </tr>
+              }
+              <tr class="bg-slate-50 font-semibold">
+                <td class="px-3 py-2 text-slate-800">Tổng cộng</td>
+                <td class="px-3 py-2 text-right text-slate-800">{{ formatCount(totals().orders) }}</td>
+                <td class="px-3 py-2 text-right text-slate-800">
+                  {{ formatPrice(totals().grossRevenue) }}
+                </td>
+                <td class="px-3 py-2 text-right text-rose-700">{{ formatPrice(totals().refunds) }}</td>
+                <td class="px-3 py-2 text-right text-slate-800">
+                  {{ formatPrice(totals().netRevenue) }}
+                </td>
+                <td class="px-3 py-2 text-right text-slate-800">{{ formatPrice(totals().cost) }}</td>
+                <td
+                  class="px-3 py-2 text-right"
+                  [class]="totals().grossProfit < 0 ? 'text-rose-700' : 'text-emerald-700'"
+                >
+                  {{ formatPrice(totals().grossProfit) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        }
+      </div>
+    }
+  } @else {
+    <div class="sh-card">
+      <app-empty-state
+        icon="📊"
+        title="Chưa có dữ liệu báo cáo"
+        description="Chọn khoảng ngày rồi bấm “Xem báo cáo”."
+      />
+    </div>
+  }
+</section>

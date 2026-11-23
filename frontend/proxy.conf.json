@@ -1,0 +1,9 @@
+{
+  "//": "Dev server proxy: mọi request /api/** được chuyển sang API ASP.NET Core (http://localhost:5270) nên KHÔNG vướng CORS. Script `npm start` đã gắn --proxy-config proxy.conf.json.",
+  "/api": {
+    "target": "http://localhost:5270",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "warn"
+  }
+}

@@ -1,0 +1,304 @@
+<!-- ===== 1. Tiêu đề trang + thao tác chính ===== -->
+<section class="border-b border-white/10 bg-slate-950 px-4 py-8 sm:px-6">
+  <div class="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-white sm:text-3xl">Mua sắm linh kiện máy tính</h1>
+      <p class="mt-1 text-sm text-slate-400">
+        @if (loading()) {
+          Đang tải sản phẩm…
+        } @else {
+          {{ result().totalCount }} sản phẩm
+        }
+      </p>
+    </div>
+
+    <div class="flex items-center gap-2">
+      @if (filtered()) {
+        <button
+          type="button"
+          class="rounded-md border border-white/20 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-white/10"
+          (click)="resetFilters()"
+        >
+          Xoá bộ lọc
+        </button>
+      }
+      <a
+        routerLink="/cart"
+        class="rounded-md border border-white/20 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-white/10"
+      >
+        🛒 Giỏ hàng
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 2. Category Tabs — mỗi tab là một danh mục, tab đang chọn có trạng thái Active ===== -->
+<section class="border-b border-white/10 bg-slate-950 px-4 sm:px-6">
+  <div class="mx-auto flex max-w-6xl gap-2 overflow-x-auto py-3">
+    <button type="button" [class]="tabClass('')" (click)="selectCategory('')">Tất cả</button>
+
+    @for (category of categories(); track category.id) {
+      @if (category.code; as code) {
+        <button type="button" [class]="tabClass(code)" (click)="selectCategory(code)">
+          {{ category.name }}
+        </button>
+      }
+    }
+  </div>
+</section>
+
+<!-- ===== 3. Filter Toolbar — các điều kiện KẾT HỢP được với nhau ===== -->
+<section class="border-b border-white/10 bg-slate-900 px-4 py-4 sm:px-6">
+  <form
+    class="mx-auto grid max-w-6xl gap-3 sm:grid-cols-2 lg:grid-cols-4"
+    [formGroup]="filters"
+    (ngSubmit)="applyFilters()"
+  >
+    <div class="sm:col-span-2">
+      <label [class]="labelClass" for="keyword">Tìm theo tên hoặc mã SKU</label>
+      <input
+        id="keyword"
+        type="search"
+        placeholder="VD: Ryzen 5 7600 hoặc CPU-AMD-001"
+        formControlName="keyword"
+        [class]="inputClass"
+      />
+    </div>
+
+    <div>
+      <label [class]="labelClass" for="brandId">Thương hiệu</label>
+      <select id="brandId" formControlName="brandId" [class]="inputClass">
+        <option [ngValue]="null">Tất cả thương hiệu</option>
+        @for (brand of brands(); track brand.id) {
+          <option [ngValue]="brand.id">{{ brand.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div>
+      <label [class]="labelClass" for="sortBy">Sắp xếp</label>
+      <select id="sortBy" formControlName="sortBy" [class]="inputClass">
+        @for (option of sortOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+
+    <div>
+      <label [class]="labelClass" for="minPrice">Giá từ (VND)</label>
+      <input
+        id="minPrice"
+        type="number"
+        min="0"
+        step="100000"
+        formControlName="minPrice"
+        [class]="inputClass"
+      />
+    </div>
+
+    <div>
+      <label [class]="labelClass" for="maxPrice">Giá đến (VND)</label>
+      <input
+        id="maxPrice"
+        type="number"
+        min="0"
+        step="100000"
+        formControlName="maxPrice"
+        [class]="inputClass"
+      />
+    </div>
+
+    <div>
+      <label [class]="labelClass" for="inStockOnly">Tình trạng tồn kho</label>
+      <select id="inStockOnly" formControlName="inStockOnly" [class]="inputClass">
+        <option [ngValue]="false">Tất cả tình trạng</option>
+        <option [ngValue]="true">Chỉ còn hàng</option>
+      </select>
+    </div>
+
+    <div class="flex items-end gap-2">
+      <button
+        type="submit"
+        class="flex-1 rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700"
+      >
+        Tìm kiếm
+      </button>
+      <button
+        type="button"
+        class="rounded-md border border-white/20 px-4 py-2 text-sm text-slate-200 transition hover:bg-white/10"
+        (click)="resetFilters()"
+      >
+        Xoá lọc
+      </button>
+    </div>
+  </form>
+</section>
+
+<!-- ===== 4. Kết quả: Loading state · Lỗi · Empty state ===== -->
+<section class="bg-slate-950 px-4 py-8 sm:px-6">
+  <div class="mx-auto max-w-6xl">
+    @if (loading()) {
+      <!-- Loading state: skeleton -->
+      <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-busy="true">
+        @for (placeholder of skeletons; track $index) {
+          <div class="animate-pulse overflow-hidden rounded-xl border border-white/10 bg-slate-900/60">
+            <div class="h-44 bg-slate-800"></div>
+            <div class="space-y-3 p-4">
+              <div class="h-3 w-1/2 rounded bg-slate-800"></div>
+              <div class="h-4 w-4/5 rounded bg-slate-800"></div>
+              <div class="h-5 w-1/3 rounded bg-slate-800"></div>
+              <div class="h-8 w-full rounded bg-slate-800"></div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (loadFailed()) {
+      <!-- Lỗi tải dữ liệu -->
+      <div class="flex flex-col items-center justify-center gap-3 rounded-xl border border-white/10 bg-slate-900/60 px-6 py-14 text-center">
+        <span class="text-4xl" aria-hidden="true">📡</span>
+        <p class="text-base font-semibold text-white">Không tải được sản phẩm</p>
+        <p class="max-w-md text-sm text-slate-400">Vui lòng kiểm tra kết nối và thử lại.</p>
+        <button type="button" class="mt-1 rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700" (click)="retry()">
+          Thử lại
+        </button>
+      </div>
+    }
+
+    @if (!loading() && !loadFailed() && result().items.length === 0) {
+      <!-- Empty state: chưa có sản phẩm HOẶC không tìm thấy theo bộ lọc -->
+      <div class="flex flex-col items-center justify-center gap-3 rounded-xl border border-white/10 bg-slate-900/60 px-6 py-14 text-center">
+        @if (filtered()) {
+          <span class="text-4xl" aria-hidden="true">🔍</span>
+          <p class="text-base font-semibold text-white">Không tìm thấy sản phẩm phù hợp</p>
+          <p class="max-w-md text-sm text-slate-400">Thử bỏ vài điều kiện lọc hoặc dùng từ khoá khác.</p>
+          <button type="button" class="mt-1 rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700" (click)="resetFilters()">
+            Xoá bộ lọc
+          </button>
+        } @else {
+          <span class="text-4xl" aria-hidden="true">📦</span>
+          <p class="text-base font-semibold text-white">Chưa có sản phẩm</p>
+          <p class="max-w-md text-sm text-slate-400">Cửa hàng đang cập nhật sản phẩm. Vui lòng quay lại sau.</p>
+        }
+      </div>
+    }
+
+    <!-- ===== 5. Product Card Grid: lưới thẻ sản phẩm responsive ===== -->
+    @if (!loading() && !loadFailed() && result().items.length > 0) {
+      <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        @for (product of result().items; track product.id) {
+          <article
+            class="group flex flex-col overflow-hidden rounded-xl border border-white/10 bg-slate-900/60 transition duration-200 hover:-translate-y-0.5 hover:border-brand-500/40 hover:shadow-lg hover:shadow-black/30"
+          >
+            <a
+              class="relative block h-44 overflow-hidden bg-slate-800"
+              [routerLink]="['/catalog/products', product.id]"
+              [attr.aria-label]="product.name"
+            >
+              @if (showImage(product)) {
+                <img
+                  class="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                  [src]="product.imageUrl"
+                  [alt]="product.name"
+                  loading="lazy"
+                  (error)="onImageError(product.id)"
+                />
+              } @else {
+                <span class="grid h-full place-items-center text-4xl text-slate-600" aria-hidden="true">
+                  🖥️
+                </span>
+              }
+              @if (isPromotion(product)) {
+                <span
+                  class="absolute left-2 top-2 rounded-full bg-brand-600 px-2.5 py-0.5 text-[11px] font-semibold text-white"
+                >
+                  Khuyến mãi
+                </span>
+              }
+            </a>
+
+            <div class="flex flex-1 flex-col gap-2 p-4">
+              <div class="flex items-center justify-between gap-2">
+                <p class="truncate text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                  {{ product.brandName }}
+                </p>
+                <span
+                  class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium"
+                  [class]="stockClass(product.availableQty)"
+                >
+                  {{ stockLabel(product.availableQty) }}
+                </span>
+              </div>
+
+              <a
+                class="line-clamp-2 text-sm font-semibold text-white transition hover:text-brand-300"
+                [routerLink]="['/catalog/products', product.id]"
+              >
+                {{ product.name }}
+              </a>
+
+              <p class="text-[11px] text-slate-500">
+                SKU: <span class="font-mono">{{ product.sku }}</span>
+              </p>
+
+              <div class="mt-auto space-y-1">
+                <p class="text-lg font-semibold text-brand-300">{{ formatPrice(product.price) }}</p>
+                @if (product.price < product.basePrice) {
+                  <p class="text-xs text-slate-500 line-through">{{ formatPrice(product.basePrice) }}</p>
+                }
+                <p class="text-[11px] text-slate-500">
+                  Tồn khả dụng: <span class="text-slate-300">{{ product.availableQty }}</span> · Bảo hành
+                  {{ product.warrantyMonths }} tháng
+                </p>
+
+                <div class="mt-1 flex gap-2">
+                  <a
+                    class="flex-1 rounded-md border border-white/20 px-3 py-1.5 text-center text-xs font-medium text-slate-100 transition hover:bg-white/10"
+                    [routerLink]="['/catalog/products', product.id]"
+                  >
+                    Chi tiết
+                  </a>
+                  <button
+                    type="button"
+                    class="flex-1 rounded-md bg-brand-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    [disabled]="product.availableQty <= 0 || addingProductId() === product.id"
+                    (click)="addToCart(product)"
+                  >
+                    {{ addingProductId() === product.id ? 'Đang thêm…' : 'Thêm vào giỏ' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+
+      <!-- Phân trang -->
+      <div class="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
+        <p class="text-sm text-slate-400">{{ rangeText() }}</p>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            class="rounded-md border border-white/20 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+            [disabled]="!result().hasPreviousPage"
+            (click)="onPageChange(result().pageNumber - 1)"
+          >
+            ‹ Trước
+          </button>
+          <span class="text-sm text-slate-300">
+            Trang {{ result().pageNumber }}/{{ result().totalPages }}
+          </span>
+          <button
+            type="button"
+            class="rounded-md border border-white/20 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+            [disabled]="!result().hasNextPage"
+            (click)="onPageChange(result().pageNumber + 1)"
+          >
+            Sau ›
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+</section>

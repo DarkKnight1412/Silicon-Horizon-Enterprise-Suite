@@ -1,0 +1,226 @@
+@if (loading()) {
+  <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tải đợt kiểm kê…</div>
+} @else if (detail(); as data) {
+  <section class="space-y-4">
+    <nav class="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+      <a routerLink="/inventory/stock-takes" class="hover:text-brand-700">Kiểm kê</a>
+      <span>/</span>
+      <span class="font-mono font-medium text-slate-800">{{ data.header.stockTakeCode }}</span>
+      <span class="rounded-full px-2 py-1 text-xs font-medium" [class]="statusClass(data.header.status)">
+        {{ statusLabel(data.header.status) }}
+      </span>
+      @if (busy()) {
+        <span class="text-xs text-slate-400">Đang xử lý…</span>
+      }
+    </nav>
+
+    <div class="sh-card p-4">
+      <h1 class="sh-page-title">Đợt kiểm kê {{ data.header.stockTakeCode }}</h1>
+      <p class="text-sm text-slate-500">
+        Mở lúc {{ formatMoment(data.header.createdAt) }} · chi nhánh #{{ data.header.branchId }}
+      </p>
+
+      @if (data.header.approvedAt) {
+        <p class="mt-2 text-sm text-slate-600">
+          Xử lý lúc {{ formatMoment(data.header.approvedAt) }}
+          (người xử lý #{{ data.header.approvedBy ?? '—' }})
+        </p>
+      }
+
+      @if (hasSerialDiff()) {
+        <p class="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          Có dòng hàng QUẢN LÝ SERIAL bị lệch nên proc sẽ TỪ CHỐI duyệt đợt này. Hãy xử lý từng serial ở
+          <a routerLink="/inventory/serials" class="underline">Tra cứu serial</a>
+          (đổi sang Hàng lỗi / Đã hủy) rồi kiểm kê lại.
+        </p>
+      }
+    </div>
+
+    <div class="sh-card overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-3 py-2">Sản phẩm</th>
+            <th class="px-3 py-2 text-right">Tồn hệ thống</th>
+            <th class="w-28 px-3 py-2 text-right">Số đếm</th>
+            <th class="px-3 py-2 text-right">Lệch</th>
+            <th class="px-3 py-2">Lý do lệch</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @if (canCount()) {
+            @for (line of counts.controls; track line) {
+              <tr [formGroup]="line">
+                <td class="px-3 py-2">
+                  <p class="font-medium text-slate-800">{{ line.controls.name.value }}</p>
+                  <p class="font-mono text-xs text-slate-500">{{ line.controls.sku.value }}</p>
+                  @if (line.controls.requiresSerial.value) {
+                    <span class="mt-1 inline-block rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800">
+                      quản lý serial
+                    </span>
+                  }
+                </td>
+                <td class="px-3 py-2 text-right text-slate-700">{{ line.controls.systemQty.value }}</td>
+                <td class="px-3 py-2">
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    formControlName="countedQty"
+                    class="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                    [class.sh-input-invalid]="line.controls.countedQty.touched && line.controls.countedQty.invalid"
+                  />
+                  @if (line.controls.countedQty.touched && line.controls.countedQty.invalid) {
+                    <p class="sh-field-error">Số đếm không âm.</p>
+                  }
+                </td>
+                <td class="px-3 py-2 text-right font-medium">
+                  @if (line.controls.countedQty.value === null) {
+                    <span class="text-slate-400">—</span>
+                  } @else {
+                    @let diff = (line.controls.countedQty.value ?? 0) - line.controls.systemQty.value;
+                    <span [class]="diff === 0 ? 'text-slate-500' : diff > 0 ? 'text-emerald-700' : 'text-rose-700'">
+                      {{ diff > 0 ? '+' : '' }}{{ diff }}
+                    </span>
+                  }
+                </td>
+                <td class="px-3 py-2">
+                  <input
+                    type="text"
+                    formControlName="reason"
+                    placeholder="Nên nhập khi có lệch"
+                    class="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                  />
+                </td>
+              </tr>
+            }
+          } @else {
+            @for (item of data.items; track item.productId) {
+              <tr>
+                <td class="px-3 py-2">
+                  <p class="font-medium text-slate-800">{{ item.name }}</p>
+                  <p class="font-mono text-xs text-slate-500">{{ item.sku }}</p>
+                  @if (item.requiresSerial) {
+                    <span class="mt-1 inline-block rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800">
+                      quản lý serial
+                    </span>
+                  }
+                </td>
+                <td class="px-3 py-2 text-right text-slate-700">{{ item.systemQty }}</td>
+                <td class="px-3 py-2 text-right text-slate-700">{{ item.countedQty }}</td>
+                <td class="px-3 py-2 text-right font-medium">
+                  <span
+                    [class]="item.diffQty === 0 ? 'text-slate-500' : item.diffQty > 0 ? 'text-emerald-700' : 'text-rose-700'"
+                  >
+                    {{ item.diffQty > 0 ? '+' : '' }}{{ item.diffQty }}
+                  </span>
+                </td>
+                <td class="px-3 py-2 text-slate-500">{{ item.reason ?? '—' }}</td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+
+    @if (canCount()) {
+      <div class="sh-card flex flex-wrap items-center justify-between gap-3 p-4">
+        <p class="text-sm text-slate-600">
+          Tồn chỉ thay đổi sau khi Quản lý duyệt. "Gửi duyệt" sẽ khoá việc nhập số đếm tiếp.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            [disabled]="busy()"
+            (click)="submitCounts(false)"
+          >
+            Lưu số đếm
+          </button>
+          <button
+            type="button"
+            class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+            [disabled]="busy()"
+            (click)="submitCounts(true)"
+          >
+            Gửi số đếm để duyệt
+          </button>
+        </div>
+      </div>
+    }
+
+    @if (canApprove()) {
+      <div class="sh-card space-y-3 p-4">
+        <h2 class="text-sm font-semibold text-slate-700">Duyệt đợt kiểm kê (Quản lý / Admin)</h2>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700" for="approveNote">
+            Ghi chú duyệt / lý do từ chối
+          </label>
+          <textarea
+            id="approveNote"
+            rows="3"
+            [formControl]="approveNote"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            [class.sh-input-invalid]="approveNote.touched && approveNote.invalid"
+          ></textarea>
+          @if (approveNote.touched && approveNote.invalid) {
+            <p class="sh-field-error">Ghi chú tối đa 300 ký tự.</p>
+          }
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+            [disabled]="busy() || hasSerialDiff()"
+            (click)="decide(true)"
+          >
+            Duyệt và áp chênh lệch
+          </button>
+          <button
+            type="button"
+            class="rounded-md bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"
+            [disabled]="busy()"
+            (click)="decide(false)"
+          >
+            Từ chối đợt kiểm kê
+          </button>
+        </div>
+
+        @if (hasSerialDiff()) {
+          <p class="text-sm text-amber-700">
+            Không thể duyệt khi còn dòng serial bị lệch — hãy xử lý serial trước.
+          </p>
+        }
+      </div>
+    }
+
+    @if (!canCount() && !canApprove()) {
+      <div class="sh-card p-4">
+        <p class="text-sm text-slate-500">
+          Đợt kiểm kê đã kết thúc hoặc bạn không đủ quyền thao tác trên trạng thái hiện tại
+          (nhập số đếm: Thủ kho/Admin; duyệt: Quản lý/Admin).
+        </p>
+      </div>
+    }
+
+  </section>
+} @else {
+  <div class="sh-card">
+    <app-empty-state
+      icon="🔍"
+      title="Không mở được đợt kiểm kê"
+      description="Đợt không tồn tại hoặc thuộc chi nhánh khác (backend trả 403/404)."
+    />
+    <div class="flex justify-center pb-6">
+      <a
+        routerLink="/inventory/stock-takes"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        ← Về màn kiểm kê
+      </a>
+    </div>
+  </div>
+}

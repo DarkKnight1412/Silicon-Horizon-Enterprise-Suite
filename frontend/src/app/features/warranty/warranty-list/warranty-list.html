@@ -1,0 +1,138 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Phiếu bảo hành</h1>
+      <p class="text-sm text-slate-500">
+        {{ result().totalCount }} phiếu · nhân viên thấy phiếu của chi nhánh mình
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <a
+        routerLink="/warranty/lookup"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        Tra cứu theo serial
+      </a>
+      <a
+        routerLink="/warranty/tickets/new"
+        class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+      >
+        + Tiếp nhận bảo hành
+      </a>
+    </div>
+  </header>
+
+  <form
+    class="sh-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4"
+    [formGroup]="filters"
+    (ngSubmit)="load(1, result().pageSize)"
+    novalidate
+  >
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="status">Trạng thái</label>
+      <select
+        id="status"
+        formControlName="status"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      >
+        <option [ngValue]="null">Tất cả trạng thái</option>
+        @for (option of statusOptions; track option.value) {
+          <option [ngValue]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="lg:col-span-2">
+      <label class="block text-sm font-medium text-slate-700" for="keyword">
+        Từ khoá (mã phiếu / số serial / SĐT khách)
+      </label>
+      <input
+        id="keyword"
+        type="search"
+        formControlName="keyword"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    <div class="flex items-end gap-2">
+      <button
+        type="submit"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+      >
+        Lọc
+      </button>
+      <button
+        type="button"
+        class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+        (click)="resetFilters()"
+      >
+        Xoá lọc
+      </button>
+    </div>
+  </form>
+
+  @if (loading()) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tải phiếu bảo hành…</div>
+  } @else if (result().items.length === 0) {
+    <div class="sh-card">
+      <app-empty-state
+        icon="🛠️"
+        title="Chưa có phiếu bảo hành nào"
+        description="Phiếu tiếp nhận tại quầy sẽ xuất hiện ở đây kèm trạng thái xử lý."
+      />
+    </div>
+  } @else {
+    <div class="sh-card overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-3 py-2">Mã phiếu</th>
+            <th class="px-3 py-2">Khách hàng</th>
+            <th class="px-3 py-2">Serial</th>
+            <th class="px-3 py-2">Tiếp nhận</th>
+            <th class="px-3 py-2">Trả khách</th>
+            <th class="px-3 py-2">Trạng thái</th>
+            <th class="px-3 py-2 text-right"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (ticket of result().items; track ticket.id) {
+            <tr>
+              <td class="px-3 py-2 font-mono text-slate-800">{{ ticket.ticketCode }}</td>
+              <td class="px-3 py-2 text-slate-700">{{ ticket.customerName }}</td>
+              <td class="px-3 py-2 font-mono text-xs text-slate-600">
+                {{ ticket.serialNumber ?? '—' }}
+              </td>
+              <td class="px-3 py-2 text-slate-600">{{ formatMoment(ticket.receivedAt) }}</td>
+              <td class="px-3 py-2 text-slate-600">{{ formatMoment(ticket.returnedAt) }}</td>
+              <td class="px-3 py-2">
+                <span class="rounded-full px-2 py-1 text-xs font-medium" [class]="statusClass(ticket.status)">
+                  {{ statusLabel(ticket.status) }}
+                </span>
+              </td>
+              <td class="px-3 py-2 text-right">
+                <a
+                  class="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                  [routerLink]="['/warranty/tickets', ticket.id]"
+                >
+                  Chi tiết
+                </a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sh-card">
+      <app-pagination
+        [pageNumber]="result().pageNumber"
+        [pageSize]="result().pageSize"
+        [totalCount]="result().totalCount"
+        [totalPages]="result().totalPages"
+        (pageChange)="load($event, result().pageSize)"
+        (pageSizeChange)="load(1, $event)"
+      />
+    </div>
+  }
+</section>

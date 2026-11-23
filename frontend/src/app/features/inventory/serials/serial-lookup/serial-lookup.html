@@ -1,0 +1,301 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Tra cứu serial</h1>
+      <p class="text-sm text-slate-500">
+        Xem trạng thái, bảo hành, đơn mua và lịch sử biến động của một số serial.
+      </p>
+    </div>
+    <a
+      routerLink="/inventory/stock"
+      class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+    >
+      ← Tồn kho
+    </a>
+  </header>
+
+  <form
+    class="sh-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4"
+    [formGroup]="filters"
+    (ngSubmit)="lookup()"
+    novalidate
+  >
+    <div class="lg:col-span-2">
+      <label class="block text-sm font-medium text-slate-700" for="serialNumber">
+        Số serial <span class="text-rose-600">*</span>
+      </label>
+      <input
+        id="serialNumber"
+        type="search"
+        formControlName="serialNumber"
+        placeholder="Ví dụ: SN-SSD-000123"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-sm"
+        [class.sh-input-invalid]="
+          filters.controls.serialNumber.touched && filters.controls.serialNumber.invalid
+        "
+      />
+      @if (filters.controls.serialNumber.touched && filters.controls.serialNumber.invalid) {
+        <p class="sh-field-error">Nhập số serial (tối đa 100 ký tự).</p>
+      }
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="productId">
+        ID sản phẩm (nếu serial trùng)
+      </label>
+      <input
+        id="productId"
+        type="number"
+        min="1"
+        step="1"
+        formControlName="productId"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    <div class="flex items-end gap-2">
+      <button
+        type="submit"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+      >
+        Tra cứu
+      </button>
+      <button
+        type="button"
+        class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+        (click)="reset()"
+      >
+        Xoá
+      </button>
+    </div>
+  </form>
+
+  @if (loading()) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tra cứu serial…</div>
+  } @else if (apiError(); as error) {
+    <div class="sh-card p-8 text-center text-sm text-rose-700">
+      {{ error.message }}
+      @if (error.status === 400) {
+        <span class="mt-1 block text-slate-500">
+          Số serial có thể trùng ở nhiều sản phẩm — nhập thêm ID sản phẩm rồi tra cứu lại.
+        </span>
+      }
+    </div>
+  } @else if (result(); as data) {
+    <div class="grid gap-4 lg:grid-cols-3">
+      <div class="sh-card p-4 lg:col-span-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <h2 class="font-mono text-lg font-semibold text-slate-900">
+            {{ data.serial.serialNumber }}
+          </h2>
+          <span class="rounded-full px-2 py-1 text-xs font-medium" [class]="statusClass(data.serial.status)">
+            {{ statusLabel(data.serial.status) }}
+          </span>
+          @if (data.serial.inWarranty) {
+            <span class="rounded-full bg-emerald-100 px-2 py-1 text-xs text-emerald-800">
+              còn bảo hành {{ data.serial.warrantyDaysLeft ?? 0 }} ngày
+            </span>
+          } @else {
+            <span class="rounded-full bg-slate-200 px-2 py-1 text-xs text-slate-700">hết bảo hành</span>
+          }
+        </div>
+
+        <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+          <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+            <dt class="text-slate-500">Sản phẩm</dt>
+            <dd class="text-right font-medium text-slate-800">
+              {{ data.serial.productName }}
+              <span class="block font-mono text-xs font-normal text-slate-500">
+                {{ data.serial.sku }}
+              </span>
+            </dd>
+          </div>
+          <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+            <dt class="text-slate-500">Chi nhánh hiện tại</dt>
+            <dd class="font-medium text-slate-800">#{{ data.serial.branchId }}</dd>
+          </div>
+          <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+            <dt class="text-slate-500">Ngày bán</dt>
+            <dd class="font-medium text-slate-800">{{ formatDay(data.serial.soldAt) }}</dd>
+          </div>
+          <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+            <dt class="text-slate-500">Bảo hành</dt>
+            <dd class="font-medium text-slate-800">
+              {{ formatDay(data.serial.warrantyStartDate) }} →
+              {{ formatDay(data.serial.warrantyEndDate) }}
+            </dd>
+          </div>
+          <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+            <dt class="text-slate-500">Đơn mua</dt>
+            <dd class="font-medium text-slate-800">
+              @if (data.serial.orderId !== null) {
+                <a class="text-brand-700 hover:underline" [routerLink]="['/orders', data.serial.orderId]">
+                  {{ data.serial.orderCode ?? data.serial.orderId }}
+                </a>
+              } @else {
+                —
+              }
+            </dd>
+          </div>
+          <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+            <dt class="text-slate-500">Khách hàng</dt>
+            <dd class="text-right font-medium text-slate-800">
+              {{ data.serial.customerName ?? '—' }}
+              @if (data.serial.customerPhone) {
+                <span class="block text-xs font-normal text-slate-500">
+                  {{ data.serial.customerPhone }}
+                </span>
+              }
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      <aside class="sh-card h-fit p-4">
+        <h2 class="text-sm font-semibold text-slate-700">Đổi trạng thái serial</h2>
+        @if (!canChangeStatus()) {
+          <p class="mt-2 text-sm text-slate-500">
+            Chỉ Quản lý hoặc Admin được đổi trạng thái serial thủ công.
+          </p>
+        } @else if (targetOptions().length === 0) {
+          <p class="mt-2 text-sm text-slate-500">
+            Serial ở trạng thái "{{ statusLabel(data.serial.status) }}" nên không có chuyển đổi thủ công
+            nào được phép.
+          </p>
+        } @else {
+          <form class="mt-2 space-y-3" [formGroup]="statusForm" (ngSubmit)="changeStatus()" novalidate>
+            <div>
+              <label class="block text-sm font-medium text-slate-700" for="toStatus">Trạng thái mới</label>
+              <select
+                id="toStatus"
+                formControlName="toStatus"
+                class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              >
+                <option [ngValue]="null">— Chọn trạng thái —</option>
+                @for (option of targetOptions(); track option.value) {
+                  <option [ngValue]="option.value">{{ option.label }}</option>
+                }
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700" for="reason">
+                Lý do <span class="text-rose-600">*</span>
+              </label>
+              <textarea
+                id="reason"
+                rows="3"
+                formControlName="reason"
+                class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                [class.sh-input-invalid]="statusForm.controls.reason.touched && statusForm.controls.reason.invalid"
+              ></textarea>
+              @if (statusForm.controls.reason.touched && statusForm.controls.reason.invalid) {
+                <p class="sh-field-error">Lý do bắt buộc (tối đa 300 ký tự).</p>
+              }
+            </div>
+
+            <button
+              type="submit"
+              class="w-full rounded-md bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"
+              [disabled]="busy()"
+            >
+              {{ busy() ? 'Đang cập nhật…' : 'Đổi trạng thái' }}
+            </button>
+            <p class="text-xs text-slate-500">
+              Rời/vào trạng thái Trong kho sẽ tự điều chỉnh tồn thực tế và ghi bút toán điều chỉnh.
+            </p>
+          </form>
+        }
+      </aside>
+    </div>
+
+    <div class="sh-card overflow-x-auto">
+      <h2 class="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700">
+        Lịch sử trạng thái ({{ data.statusHistory.length }})
+      </h2>
+      @if (data.statusHistory.length === 0) {
+        <p class="p-6 text-center text-sm text-slate-500">Serial chưa có lần đổi trạng thái nào.</p>
+      } @else {
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <tr>
+              <th class="px-3 py-2">Thời điểm</th>
+              <th class="px-3 py-2">Từ</th>
+              <th class="px-3 py-2">Sang</th>
+              <th class="px-3 py-2">Chứng từ</th>
+              <th class="px-3 py-2">Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (entry of data.statusHistory; track entry.changedAt + '-' + entry.toStatus) {
+              <tr>
+                <td class="px-3 py-2 text-slate-600">{{ formatMoment(entry.changedAt) }}</td>
+                <td class="px-3 py-2 text-slate-600">{{ entry.fromStatusName ?? '—' }}</td>
+                <td class="px-3 py-2">
+                  <span class="rounded-full px-2 py-0.5 text-xs" [class]="statusClass(entry.toStatus)">
+                    {{ entry.toStatusName }}
+                  </span>
+                </td>
+                <td class="px-3 py-2 text-slate-600">
+                  @if (entry.refType) {
+                    {{ entry.refType }} #{{ entry.refId ?? '—' }}
+                  } @else {
+                    —
+                  }
+                </td>
+                <td class="px-3 py-2 text-slate-500">{{ entry.note ?? '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+
+    <div class="sh-card overflow-x-auto">
+      <h2 class="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700">
+        Phiếu bảo hành của serial ({{ data.warrantyTickets.length }})
+      </h2>
+      @if (data.warrantyTickets.length === 0) {
+        <p class="p-6 text-center text-sm text-slate-500">Serial chưa từng vào bảo hành.</p>
+      } @else {
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <tr>
+              <th class="px-3 py-2">Mã phiếu</th>
+              <th class="px-3 py-2">Mô tả lỗi</th>
+              <th class="px-3 py-2">Tiếp nhận</th>
+              <th class="px-3 py-2">Trả khách</th>
+              <th class="px-3 py-2 text-right"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (ticket of data.warrantyTickets; track ticket.id) {
+              <tr>
+                <td class="px-3 py-2 font-mono text-slate-800">{{ ticket.ticketCode }}</td>
+                <td class="px-3 py-2 text-slate-600">{{ ticket.issueDescription ?? '—' }}</td>
+                <td class="px-3 py-2 text-slate-600">{{ formatMoment(ticket.receivedAt) }}</td>
+                <td class="px-3 py-2 text-slate-600">{{ formatMoment(ticket.returnedAt) }}</td>
+                <td class="px-3 py-2 text-right">
+                  <a
+                    class="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                    [routerLink]="['/warranty/tickets', ticket.id]"
+                  >
+                    Mở phiếu
+                  </a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  } @else {
+    <div class="sh-card">
+      <app-empty-state
+        icon="🔎"
+        title="Nhập số serial để tra cứu"
+        description="Kết quả gồm sản phẩm, tình trạng bảo hành, đơn mua và lịch sử đổi trạng thái."
+      />
+    </div>
+  }
+</section>

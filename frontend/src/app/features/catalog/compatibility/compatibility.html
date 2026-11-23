@@ -1,0 +1,95 @@
+<section class="space-y-4">
+  <header>
+    <h1 class="sh-page-title">Kiểm tra tương thích linh kiện</h1>
+    <p class="text-sm text-slate-500">
+      Chọn linh kiện cho dàn máy rồi bấm kiểm tra. Hệ thống chỉ <strong>cảnh báo</strong> — bạn vẫn có
+      thể đặt hàng.
+    </p>
+  </header>
+
+  <form class="sh-card grid gap-3 p-4 sm:grid-cols-2" [formGroup]="form" (ngSubmit)="check()">
+    @for (slot of slots; track slot.key) {
+      <div>
+        <label class="block text-sm font-medium text-slate-700" [attr.for]="slot.key">
+          {{ slot.label }}
+        </label>
+        <select
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          [attr.id]="slot.key"
+          [formControlName]="slot.key"
+        >
+          <option [ngValue]="null">-- Không chọn --</option>
+          @for (product of optionsFor(slot.categoryCode); track product.id) {
+            <option [ngValue]="product.id">
+              {{ product.name }} — {{ formatPrice(product.price) }}
+            </option>
+          }
+        </select>
+        <p class="mt-1 text-xs text-slate-500">
+          {{ slot.hint }}
+          @if (loadingOptions()) {
+            <span>· đang tải danh sách…</span>
+          }
+        </p>
+      </div>
+    }
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="ramQuantity">Số kit RAM</label>
+      <input
+        id="ramQuantity"
+        type="number"
+        min="1"
+        max="8"
+        formControlName="ramQuantity"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+      <p class="mt-1 text-xs text-slate-500">Dùng để kiểm tra số thanh RAM so với số khe bo mạch chủ.</p>
+    </div>
+
+    <div class="flex items-end gap-2 sm:col-span-2">
+      <button
+        type="submit"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+        [disabled]="checking()"
+      >
+        {{ checking() ? 'Đang kiểm tra…' : 'Kiểm tra tương thích' }}
+      </button>
+      <button
+        type="button"
+        class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+        (click)="reset()"
+      >
+        Làm lại
+      </button>
+    </div>
+  </form>
+
+  @if (result(); as response) {
+    <div
+      class="sh-card border-l-4 p-4"
+      [class]="response.isCompatible ? 'border-l-emerald-500' : 'border-l-amber-500'"
+    >
+      @if (response.isCompatible) {
+        <p class="text-sm font-semibold text-emerald-700">
+          ✅ Các linh kiện đã chọn không có xung đột theo 4 quy tắc hiện có.
+        </p>
+        <p class="mt-1 text-xs text-slate-500">
+          Hệ thống mới kiểm tra socket, chuẩn RAM, số khe RAM và công suất nguồn theo TDP CPU.
+        </p>
+      } @else {
+        <p class="text-sm font-semibold text-amber-800">
+          ⚠️ Phát hiện {{ response.warnings.length }} cảnh báo tương thích
+        </p>
+        <ul class="mt-2 space-y-1 text-sm text-amber-900">
+          @for (warning of response.warnings; track warning.code) {
+            <li class="rounded bg-amber-50 px-3 py-2">
+              <span class="font-medium">{{ warningLabel(warning.code) }}</span>
+              <span class="text-amber-800"> — {{ warning.message }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  }
+</section>

@@ -1,0 +1,203 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Đơn hàng của tôi</h1>
+      <p class="text-sm text-slate-500">{{ result().totalCount }} đơn hàng</p>
+    </div>
+    <a routerLink="/shop" class="text-sm text-brand-700 hover:underline">← Tiếp tục mua</a>
+  </header>
+
+  <form
+    class="sh-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4"
+    [formGroup]="filters"
+    (ngSubmit)="search(1, result().pageSize)"
+    novalidate
+  >
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="status">Trạng thái</label>
+      <select
+        id="status"
+        formControlName="status"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      >
+        <option [ngValue]="null">Tất cả trạng thái</option>
+        @for (option of statusOptions; track option.value) {
+          <option [ngValue]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="fromDate">Từ ngày</label>
+      <input
+        id="fromDate"
+        type="date"
+        formControlName="fromDate"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="toDate">Đến ngày</label>
+      <input
+        id="toDate"
+        type="date"
+        formControlName="toDate"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="keyword">Từ khoá</label>
+      <input
+        id="keyword"
+        type="search"
+        placeholder="Mã đơn / SĐT / tên khách"
+        formControlName="keyword"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    @if (filters.errors?.['dateRange']; as rangeError) {
+      <p class="sh-field-error sm:col-span-2 lg:col-span-3">{{ rangeError.message }}</p>
+    }
+
+    <div class="flex items-end gap-2 lg:col-span-4">
+      <button
+        type="submit"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+      >
+        Lọc đơn
+      </button>
+      <button
+        type="button"
+        class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+        (click)="resetFilters()"
+      >
+        Xoá lọc
+      </button>
+    </div>
+  </form>
+
+  @if (loading()) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tải đơn hàng…</div>
+  } @else if (result().items.length === 0) {
+    <div class="sh-card">
+      <app-empty-state
+        icon="🧾"
+        title="Chưa có đơn hàng nào"
+        description="Đơn bạn đặt sẽ xuất hiện ở đây kèm trạng thái xử lý."
+      />
+    </div>
+  } @else {
+    <div class="sh-card overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-3 py-2">Mã đơn</th>
+            <th class="px-3 py-2">Ngày tạo</th>
+            <th class="px-3 py-2">Trạng thái</th>
+            <th class="px-3 py-2">Thanh toán</th>
+            <th class="px-3 py-2 text-right">Tổng tiền</th>
+            <th class="px-3 py-2 text-right"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (order of result().items; track order.id) {
+            <tr>
+              <td class="px-3 py-2">
+                <a class="font-medium text-brand-700 hover:underline" [routerLink]="['/orders', order.id]">
+                  {{ order.orderCode }}
+                </a>
+                <p class="text-xs text-slate-500">{{ order.customerName }}</p>
+              </td>
+              <td class="px-3 py-2 text-slate-600">{{ formatMoment(order.createdAt) }}</td>
+              <td class="px-3 py-2">
+                <span class="rounded-full px-2 py-1 text-xs font-medium" [class]="statusClass(order.status)">
+                  {{ statusLabel(order.status) }}
+                </span>
+                @if (order.expiresAt) {
+                  <p class="mt-1 text-xs text-amber-700">Hạn giữ: {{ formatMoment(order.expiresAt) }}</p>
+                }
+              </td>
+              <td class="px-3 py-2 text-slate-600">
+                <p>{{ paymentMethodLabel(order.paymentMethod) }}</p>
+                <p class="text-xs">{{ paymentStatusLabel(order.paymentStatus) }}</p>
+              </td>
+              <td class="px-3 py-2 text-right font-medium text-slate-800">
+                {{ formatPrice(order.grandTotal) }}
+              </td>
+              <td class="px-3 py-2 text-right">
+                <div class="flex justify-end gap-2">
+                  <a
+                    class="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                    [routerLink]="['/orders', order.id]"
+                  >
+                    Chi tiết
+                  </a>
+                  @if (canCancel(order)) {
+                    <button
+                      type="button"
+                      class="rounded-md px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50"
+                      (click)="openCancel(order)"
+                    >
+                      Hủy đơn
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sh-card">
+      <app-pagination
+        [pageNumber]="result().pageNumber"
+        [pageSize]="result().pageSize"
+        [totalCount]="result().totalCount"
+        [totalPages]="result().totalPages"
+        (pageChange)="onPageChange($event)"
+        (pageSizeChange)="onPageSizeChange($event)"
+      />
+    </div>
+  }
+
+  <!-- Hộp thoại nhập lý do hủy đơn (bắt buộc theo ORD-08) -->
+  @if (cancelTarget(); as order) {
+    <div class="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4">
+      <div class="sh-card w-full max-w-md p-5">
+        <h2 class="sh-page-title">Hủy đơn {{ order.orderCode }}</h2>
+        <label class="mt-3 block text-sm font-medium text-slate-700" for="cancelReason">
+          Lý do hủy <span class="text-rose-600">*</span>
+        </label>
+        <textarea
+          id="cancelReason"
+          rows="3"
+          [formControl]="cancelReason"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        ></textarea>
+        @if (cancelReason.touched && cancelReason.invalid) {
+          <p class="sh-field-error">Vui lòng nhập lý do (tối đa 300 ký tự).</p>
+        }
+        <div class="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+            (click)="closeCancel()"
+          >
+            Đóng
+          </button>
+          <button
+            type="button"
+            class="rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-700"
+            (click)="confirmCancel()"
+          >
+            Xác nhận hủy
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</section>

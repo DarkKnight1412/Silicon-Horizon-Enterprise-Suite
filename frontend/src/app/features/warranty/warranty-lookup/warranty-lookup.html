@@ -1,0 +1,170 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Tra cứu bảo hành theo serial</h1>
+      <p class="text-sm text-slate-500">
+        Xem ngày bán, hạn bảo hành còn lại và các phiếu bảo hành đã lập cho một số serial.
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <a
+        routerLink="/warranty/tickets"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        ← Danh sách phiếu
+      </a>
+      <a
+        routerLink="/inventory/serials"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        Tra cứu serial (kho)
+      </a>
+    </div>
+  </header>
+
+  <form
+    class="sh-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4"
+    [formGroup]="filters"
+    (ngSubmit)="lookup()"
+    novalidate
+  >
+    <div class="lg:col-span-2">
+      <label class="block text-sm font-medium text-slate-700" for="serial">
+        Số serial <span class="text-rose-600">*</span>
+      </label>
+      <input
+        id="serial"
+        type="search"
+        formControlName="serial"
+        placeholder="Ví dụ: SN-SSD-000123"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-sm"
+        [class.sh-input-invalid]="filters.controls.serial.touched && filters.controls.serial.invalid"
+      />
+      @if (filters.controls.serial.touched && filters.controls.serial.invalid) {
+        <p class="sh-field-error">Nhập số serial (tối đa 100 ký tự).</p>
+      }
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="productId">
+        ID sản phẩm (nếu serial trùng)
+      </label>
+      <input
+        id="productId"
+        type="number"
+        min="1"
+        step="1"
+        formControlName="productId"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    <div class="flex items-end">
+      <button
+        type="submit"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+      >
+        Tra cứu
+      </button>
+    </div>
+  </form>
+
+  @if (loading()) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tra cứu…</div>
+  } @else if (apiError(); as error) {
+    <div class="sh-card p-8 text-center text-sm text-rose-700">{{ error.message }}</div>
+  } @else if (result(); as data) {
+    <div class="sh-card p-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <h2 class="font-mono text-lg font-semibold text-slate-900">
+          {{ data.serial.serialNumber }}
+        </h2>
+        <span class="rounded-full px-2 py-1 text-xs font-medium" [class]="serialStatusClass(data.serial.status)">
+          {{ serialStatusLabel(data.serial.status) }}
+        </span>
+        @if (data.serial.inWarranty) {
+          <span class="rounded-full bg-emerald-100 px-2 py-1 text-xs text-emerald-800">
+            còn {{ data.serial.warrantyDaysLeft ?? 0 }} ngày bảo hành
+          </span>
+        } @else {
+          <span class="rounded-full bg-rose-100 px-2 py-1 text-xs text-rose-800">hết hạn bảo hành</span>
+        }
+      </div>
+
+      <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+        <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+          <dt class="text-slate-500">Sản phẩm</dt>
+          <dd class="text-right font-medium text-slate-800">
+            {{ data.serial.productName }}
+            <span class="block font-mono text-xs font-normal text-slate-500">{{ data.serial.sku }}</span>
+          </dd>
+        </div>
+        <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+          <dt class="text-slate-500">Ngày bán</dt>
+          <dd class="font-medium text-slate-800">{{ formatDay(data.serial.soldAt) }}</dd>
+        </div>
+        <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+          <dt class="text-slate-500">Hạn bảo hành</dt>
+          <dd class="font-medium text-slate-800">{{ formatDay(data.serial.warrantyEndDate) }}</dd>
+        </div>
+      </dl>
+    </div>
+
+    <div class="sh-card overflow-x-auto">
+      <h2 class="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700">
+        Phiếu bảo hành của serial ({{ data.warrantyTickets.length }})
+      </h2>
+      @if (data.warrantyTickets.length === 0) {
+        <p class="p-6 text-center text-sm text-slate-500">Serial chưa từng vào bảo hành.</p>
+      } @else {
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <tr>
+              <th class="px-3 py-2">Mã phiếu</th>
+              <th class="px-3 py-2">Trạng thái</th>
+              <th class="px-3 py-2">Mô tả lỗi</th>
+              <th class="px-3 py-2">Tiếp nhận</th>
+              <th class="px-3 py-2">Trả khách</th>
+              <th class="px-3 py-2 text-right"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (ticket of data.warrantyTickets; track ticket.id) {
+              <tr>
+                <td class="px-3 py-2 font-mono text-slate-800">{{ ticket.ticketCode }}</td>
+                <td class="px-3 py-2">
+                  <span
+                    class="rounded-full px-2 py-0.5 text-xs"
+                    [class]="warrantyStatusClass(ticket.status)"
+                  >
+                    {{ warrantyStatusLabel(ticket.status) }}
+                  </span>
+                </td>
+                <td class="px-3 py-2 text-slate-600">{{ ticket.issueDescription ?? '—' }}</td>
+                <td class="px-3 py-2 text-slate-600">{{ formatMoment(ticket.receivedAt) }}</td>
+                <td class="px-3 py-2 text-slate-600">{{ formatMoment(ticket.returnedAt) }}</td>
+                <td class="px-3 py-2 text-right">
+                  <a
+                    class="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                    [routerLink]="['/warranty/tickets', ticket.id]"
+                  >
+                    Mở phiếu
+                  </a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+
+  } @else {
+    <div class="sh-card">
+      <app-empty-state
+        icon="🔎"
+        title="Nhập số serial để tra cứu bảo hành"
+        description="Kết quả hiển thị tình trạng bảo hành và các phiếu bảo hành của serial đó."
+      />
+    </div>
+  }
+</section>

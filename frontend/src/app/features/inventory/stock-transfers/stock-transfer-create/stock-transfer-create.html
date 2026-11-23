@@ -1,0 +1,193 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Tạo phiếu chuyển kho</h1>
+      <p class="text-sm text-slate-500">
+        Phiếu tạo ở trạng thái <span class="font-medium">Nháp</span> — tồn chỉ bị trừ khi bấm
+        "Xuất kho" ở màn chi tiết phiếu.
+      </p>
+    </div>
+    <a
+      routerLink="/inventory/stock"
+      class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+    >
+      ← Tồn kho
+    </a>
+  </header>
+
+  <div class="sh-card grid gap-3 p-4 sm:grid-cols-2">
+    <div>
+      <p class="block text-sm font-medium text-slate-700">Chi nhánh đi</p>
+      <p class="mt-1 rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-700">
+        @if (fromBranchId(); as branchId) {
+          Chi nhánh #{{ branchId }}
+          <span class="text-xs text-slate-500">(ép từ tài khoản đăng nhập)</span>
+        } @else {
+          <span class="text-amber-700">
+            Tài khoản chưa gắn chi nhánh — backend sẽ từ chối tạo phiếu chuyển (403).
+          </span>
+        }
+      </p>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="toBranchId">
+        Chi nhánh đến <span class="text-rose-600">*</span>
+      </label>
+      @if (isAdmin() && branches().length > 0) {
+        <select
+          id="toBranchId"
+          [formControl]="form.controls.toBranchId"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          [class.sh-input-invalid]="form.controls.toBranchId.touched && form.controls.toBranchId.invalid"
+        >
+          <option [ngValue]="null">— Chọn chi nhánh nhận —</option>
+          @for (branch of branches(); track branch.id) {
+            <option [ngValue]="branch.id">{{ branch.code }} · {{ branch.name }}</option>
+          }
+        </select>
+      } @else {
+        <input
+          id="toBranchId"
+          type="number"
+          min="1"
+          step="1"
+          [formControl]="form.controls.toBranchId"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          [class.sh-input-invalid]="form.controls.toBranchId.touched && form.controls.toBranchId.invalid"
+        />
+        <p class="mt-1 text-xs text-slate-500">
+          Danh mục chi nhánh chỉ Admin đọc được — nhập mã (ID) chi nhánh nhận.
+        </p>
+      }
+      @if (form.controls.toBranchId.touched && form.controls.toBranchId.invalid) {
+        <p class="sh-field-error">Vui lòng chọn hoặc nhập chi nhánh nhận.</p>
+      }
+    </div>
+  </div>
+
+  <div class="sh-card space-y-3 p-4">
+    <h2 class="text-sm font-semibold text-slate-700">Thêm dòng hàng</h2>
+    <app-product-picker
+      [keyword]="productKeyword"
+      [results]="productResults()"
+      [searching]="searching()"
+      [searched]="searched()"
+      (search)="searchProducts()"
+      (picked)="addLine($event)"
+    />
+  </div>
+
+  <div class="sh-card overflow-x-auto">
+    @if (lines.length === 0) {
+      <p class="p-6 text-center text-sm text-slate-500">
+        Chưa có dòng hàng nào — tìm và chọn sản phẩm ở khối phía trên.
+      </p>
+    } @else {
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-3 py-2">Sản phẩm</th>
+            <th class="w-24 px-3 py-2">Số lượng</th>
+            <th class="px-3 py-2"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (line of lines.controls; track line; let index = $index) {
+            <tr [formGroup]="line">
+              <td class="px-3 py-2 align-top">
+                <p class="font-medium text-slate-800">{{ line.controls.name.value }}</p>
+                <p class="font-mono text-xs text-slate-500">{{ line.controls.sku.value }}</p>
+
+                @if (line.controls.requiresSerial.value) {
+                  <label class="mt-2 block text-xs font-medium text-amber-800" [attr.for]="'tserial-' + index">
+                    Serial tại chi nhánh đi — cần đúng {{ line.controls.quantity.value ?? 0 }} số
+                  </label>
+                  <textarea
+                    [id]="'tserial-' + index"
+                    rows="3"
+                    formControlName="serialsText"
+                    class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 font-mono text-xs"
+                  ></textarea>
+                  <p class="mt-1 text-xs text-slate-500">
+                    Đã nhập {{ serialCount(line) }} serial.
+                    @if (serialMismatch(line)) {
+                      <span class="text-rose-600">Số serial chưa khớp số lượng.</span>
+                    }
+                  </p>
+                }
+              </td>
+              <td class="px-3 py-2 align-top">
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  formControlName="quantity"
+                  class="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                  [class.sh-input-invalid]="line.controls.quantity.touched && line.controls.quantity.invalid"
+                />
+                @if (line.controls.quantity.touched && line.controls.quantity.invalid) {
+                  <p class="sh-field-error">Số lượng từ 1 trở lên.</p>
+                }
+              </td>
+              <td class="px-3 py-2 text-right align-top">
+                <button
+                  type="button"
+                  class="rounded-md px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50"
+                  (click)="removeLine(index)"
+                >
+                  Xoá dòng
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+
+
+  <div class="sh-card flex flex-wrap items-center justify-between gap-3 p-4">
+    <button
+      type="button"
+      class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+      [disabled]="submitting()"
+      (click)="submit()"
+    >
+      {{ submitting() ? 'Đang tạo…' : 'Tạo phiếu chuyển kho' }}
+    </button>
+    @if (!canSubmit()) {
+      <p class="text-sm text-amber-700">
+        Chỉ Thủ kho hoặc Admin tạo được phiếu chuyển kho.
+      </p>
+    }
+  </div>
+
+  <div class="sh-card p-4">
+    <h2 class="text-sm font-semibold text-slate-700">Mở phiếu chuyển kho đã có</h2>
+    <p class="mt-1 text-xs text-slate-500">
+      Backend chưa có API danh sách phiếu chuyển nên nhập ID phiếu để mở chi tiết và thao tác
+      Xuất kho / Nhận hàng / Huỷ.
+    </p>
+    <div class="mt-3 flex flex-wrap items-end gap-2">
+      <div class="min-w-48">
+        <label class="block text-sm font-medium text-slate-700" for="lookupId">ID phiếu chuyển kho</label>
+        <input
+          id="lookupId"
+          type="number"
+          min="1"
+          step="1"
+          [formControl]="lookupId"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        />
+      </div>
+      <button
+        type="button"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+        (click)="openById()"
+      >
+        Mở phiếu
+      </button>
+    </div>
+  </div>
+</section>

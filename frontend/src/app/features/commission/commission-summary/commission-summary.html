@@ -1,0 +1,336 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Hoa hồng theo kỳ</h1>
+      <p class="text-sm text-slate-500">
+        Nhân viên xem hoa hồng của mình; Quản lý xem chi nhánh mình; Admin xem toàn hệ thống.
+      </p>
+    </div>
+    @if (isAdmin()) {
+      <div class="flex gap-2">
+        <a
+          routerLink="/audit"
+          class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+        >
+          Nhật ký
+        </a>
+        <button
+          type="button"
+          class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          [disabled]="busy() || (summary()?.period ?? null) === null"
+          (click)="openAdjust()"
+        >
+          + Điều chỉnh hoa hồng
+        </button>
+      </div>
+    }
+  </header>
+
+  <form class="sh-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4" [formGroup]="filters" (ngSubmit)="load()" novalidate>
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="yearMonth">
+        Kỳ hoa hồng (yyyy-MM) <span class="text-rose-600">*</span>
+      </label>
+      <input
+        id="yearMonth"
+        type="month"
+        formControlName="yearMonth"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+      @if (filters.controls.yearMonth.touched && filters.controls.yearMonth.invalid) {
+        <p class="sh-field-error">Chọn kỳ theo định dạng yyyy-MM.</p>
+      }
+    </div>
+
+    @if (isAdmin()) {
+      <div>
+        <label class="block text-sm font-medium text-slate-700" for="employeeFilter">
+          Nhân viên (chỉ Admin lọc được)
+        </label>
+        <select
+          id="employeeFilter"
+          formControlName="employeeId"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        >
+          <option [ngValue]="null">Tất cả nhân viên</option>
+          @for (employee of employees(); track employee.id) {
+            <option [ngValue]="employee.id">{{ employeeLabel(employee) }}</option>
+          }
+        </select>
+      </div>
+    }
+
+    <div class="flex items-end gap-2">
+      <button
+        type="submit"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+      >
+        Xem hoa hồng
+      </button>
+    </div>
+  </form>
+
+  @if (loading()) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tải dữ liệu hoa hồng…</div>
+  } @else if (summary(); as data) {
+    <!-- Kỳ hoa hồng -->
+    <div class="sh-card flex flex-wrap items-center justify-between gap-3 p-4">
+      @if (data.period; as period) {
+        <div>
+          <p class="text-xs uppercase text-slate-500">Kỳ hoa hồng</p>
+          <p class="mt-1 text-lg font-semibold text-slate-800">{{ period.yearMonth }}</p>
+          <span
+            class="mt-1 inline-block rounded-full px-2 py-1 text-xs font-medium"
+            [class]="period.isClosed ? 'bg-slate-200 text-slate-700' : 'bg-emerald-100 text-emerald-800'"
+          >
+            {{ period.statusName }} · #{{ period.periodId }}
+          </span>
+        </div>
+        @if (isAdmin()) {
+          <button
+            type="button"
+            class="rounded-md bg-slate-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-50"
+            [disabled]="busy() || period.isClosed"
+            (click)="closePeriod()"
+          >
+            {{ period.isClosed ? 'Kỳ đã chốt' : 'Chốt kỳ hoa hồng' }}
+          </button>
+        }
+      } @else {
+        <p class="text-sm text-slate-500">
+          Tháng này chưa phát sinh kỳ hoa hồng (đơn chưa hoàn tất nên chưa tính hoa hồng).
+        </p>
+      }
+    </div>
+
+    <!-- Tổng hợp theo nhân viên -->
+    <div class="sh-card overflow-x-auto">
+      <h2 class="px-3 py-2 text-sm font-semibold text-slate-700">
+        Tổng hợp theo nhân viên ({{ data.employees.length }})
+      </h2>
+
+      @if (data.employees.length === 0) {
+        <app-empty-state icon="🧾" title="Không có nhân viên nào phát sinh hoa hồng trong kỳ này." />
+      } @else {
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <tr>
+              <th class="px-3 py-2">Nhân viên</th>
+              <th class="px-3 py-2">Chi nhánh</th>
+              <th class="px-3 py-2 text-right">Phát sinh</th>
+              <th class="px-3 py-2 text-right">Thu hồi</th>
+              <th class="px-3 py-2 text-right">Điều chỉnh</th>
+              <th class="px-3 py-2 text-right">Thực nhận</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (row of data.employees; track row.employeeId) {
+              <tr>
+                <td class="px-3 py-2 text-slate-800">
+                  {{ row.fullName }}
+                  <span class="block text-xs text-slate-500">#{{ row.employeeId }}</span>
+                </td>
+                <td class="px-3 py-2 text-slate-600">#{{ row.branchId }}</td>
+                <td class="px-3 py-2 text-right text-slate-700">{{ formatPrice(row.earned) }}</td>
+                <td class="px-3 py-2 text-right text-rose-700">{{ formatPrice(row.clawback) }}</td>
+                <td class="px-3 py-2 text-right text-slate-700">{{ formatPrice(row.adjustment) }}</td>
+                <td class="px-3 py-2 text-right font-semibold text-slate-900">
+                  {{ formatPrice(row.total) }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+
+    <!-- Chi tiết bút toán -->
+    <div class="sh-card overflow-x-auto">
+      <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+        <h2 class="text-sm font-semibold text-slate-700">
+          Chi tiết bút toán ({{ entryRows().length }})
+        </h2>
+        <label class="flex items-center gap-2 text-xs text-slate-600">
+          <span>Lọc theo nhân viên</span>
+          <select
+            class="rounded-md border border-slate-300 px-2 py-1"
+            [value]="entryEmployeeId() ?? ''"
+            (change)="onEntryEmployeeChange($event)"
+          >
+            <option value="">Tất cả</option>
+            @for (row of data.employees; track row.employeeId) {
+              <option [value]="row.employeeId">{{ row.fullName }}</option>
+            }
+          </select>
+        </label>
+      </div>
+
+      @if (entryRows().length === 0) {
+        <app-empty-state icon="📄" title="Không có bút toán nào khớp bộ lọc." />
+      } @else {
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <tr>
+              <th class="px-3 py-2">#</th>
+              <th class="px-3 py-2">Loại bút toán</th>
+              <th class="px-3 py-2">Đơn hàng</th>
+              <th class="px-3 py-2">Nhân viên</th>
+              <th class="px-3 py-2 text-right">Cơ sở tính</th>
+              <th class="px-3 py-2 text-right">Tỷ lệ</th>
+              <th class="px-3 py-2 text-right">Số tiền</th>
+              <th class="px-3 py-2">Thời điểm</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (entry of entryRows(); track entry.id) {
+              <tr>
+                <td class="px-3 py-2 font-mono text-slate-600">{{ entry.id }}</td>
+                <td class="px-3 py-2">
+                  <span
+                    class="rounded-full px-2 py-1 text-xs font-medium"
+                    [class]="
+                      entry.entryType === 0
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : entry.entryType === 1
+                          ? 'bg-rose-100 text-rose-800'
+                          : 'bg-sky-100 text-sky-800'
+                    "
+                  >
+                    {{ entryTypeLabel(entry.entryType) }}
+                  </span>
+                  @if (entry.returnRequestId !== null) {
+                    <span class="block text-xs text-slate-500">
+                      Đổi trả #{{ entry.returnRequestId }}
+                    </span>
+                  }
+                </td>
+                <td class="px-3 py-2">
+                  <a
+                    class="text-brand-700 hover:underline"
+                    [routerLink]="['/orders', entry.orderId]"
+                  >
+                    {{ entry.orderCode }}
+                  </a>
+                </td>
+                <td class="px-3 py-2 text-slate-600">#{{ entry.employeeId }}</td>
+                <td class="px-3 py-2 text-right text-slate-700">
+                  {{ formatPrice(entry.baseAmount) }}
+                </td>
+                <td class="px-3 py-2 text-right text-slate-700">{{ entry.ratePercent }}%</td>
+                <td
+                  class="px-3 py-2 text-right font-medium"
+                  [class]="entry.amount < 0 ? 'text-rose-700' : 'text-slate-900'"
+                >
+                  {{ formatPrice(entry.amount) }}
+                </td>
+                <td class="px-3 py-2 text-slate-600">{{ formatMoment(entry.createdAt) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  } @else {
+    <div class="sh-card">
+      <app-empty-state
+        icon="📈"
+        title="Chưa có dữ liệu hoa hồng"
+        description="Chọn kỳ hoa hồng rồi bấm “Xem hoa hồng”."
+      />
+    </div>
+  }
+
+  <!-- Hộp thoại điều chỉnh hoa hồng (chỉ Admin) -->
+  @if (adjustOpen()) {
+    <div class="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4">
+      <div class="sh-card w-full max-w-lg p-5">
+        <h2 class="sh-page-title">Điều chỉnh hoa hồng</h2>
+        <p class="mt-1 text-xs text-slate-500">
+          Bút toán điều chỉnh luôn được ghi vào kỳ đang MỞ của ngày hiện tại — dữ liệu kỳ đã chốt
+          không bị sửa (KPI-05/KPI-06). Điều chỉnh luôn được ghi nhật ký kèm lý do.
+        </p>
+
+        <form class="mt-3 space-y-3" [formGroup]="adjustForm" (ngSubmit)="submitAdjust()" novalidate>
+          <div>
+            <label class="block text-sm font-medium text-slate-700" for="adjustEmployee">
+              Nhân viên <span class="text-rose-600">*</span>
+            </label>
+            <select
+              id="adjustEmployee"
+              formControlName="employeeId"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            >
+              <option [ngValue]="null">— Chọn nhân viên —</option>
+              @for (employee of employees(); track employee.id) {
+                <option [ngValue]="employee.id">{{ employeeLabel(employee) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label class="block text-sm font-medium text-slate-700" for="adjustOrderId">
+                Mã đơn hàng <span class="text-rose-600">*</span>
+              </label>
+              <input
+                id="adjustOrderId"
+                type="number"
+                min="1"
+                formControlName="orderId"
+                class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700" for="adjustAmount">
+                Số tiền (VND) <span class="text-rose-600">*</span>
+              </label>
+              <input
+                id="adjustAmount"
+                type="number"
+                formControlName="amount"
+                placeholder="Dương = cộng thêm, âm = trừ bớt"
+                class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+              @if (adjustForm.controls.amount.touched && adjustForm.controls.amount.invalid) {
+                <p class="sh-field-error">Nhập số tiền điều chỉnh (khác 0).</p>
+              }
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700" for="adjustReason">
+              Lý do điều chỉnh <span class="text-rose-600">*</span>
+            </label>
+            <textarea
+              id="adjustReason"
+              rows="3"
+              formControlName="reason"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            ></textarea>
+            @if (adjustForm.controls.reason.touched && adjustForm.controls.reason.invalid) {
+              <p class="sh-field-error">Vui lòng nhập lý do (tối đa 300 ký tự).</p>
+            }
+          </div>
+
+          <div class="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+              (click)="closeAdjust()"
+            >
+              Đóng
+            </button>
+            <button
+              type="submit"
+              class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+              [disabled]="busy()"
+            >
+              Tạo bút toán
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</section>

@@ -1,0 +1,133 @@
+@if (loading()) {
+  <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tải phiếu chuyển kho…</div>
+} @else if (detail(); as data) {
+  <section class="space-y-4">
+    <nav class="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+      <a routerLink="/inventory/transfers" class="hover:text-brand-700">Chuyển kho</a>
+      <span>/</span>
+      <span class="font-mono font-medium text-slate-800">{{ data.header.transferCode }}</span>
+      <span class="rounded-full px-2 py-1 text-xs font-medium" [class]="transferStatusClass(data.header.status)">
+        {{ transferStatusLabel(data.header.status) }}
+      </span>
+      @if (busy()) {
+        <span class="text-xs text-slate-400">Đang xử lý…</span>
+      }
+    </nav>
+
+    <div class="sh-card p-4">
+      <h1 class="sh-page-title">Phiếu chuyển {{ data.header.transferCode }}</h1>
+      <p class="text-sm text-slate-500">Tạo lúc {{ formatMoment(data.header.createdAt) }}</p>
+
+      <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+        <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+          <dt class="text-slate-500">Chi nhánh đi</dt>
+          <dd class="text-right font-medium text-slate-800">
+            {{ data.header.fromBranchName }}
+            <span class="block text-xs font-normal text-slate-500">#{{ data.header.fromBranchId }}</span>
+          </dd>
+        </div>
+        <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+          <dt class="text-slate-500">Chi nhánh đến</dt>
+          <dd class="text-right font-medium text-slate-800">
+            {{ data.header.toBranchName }}
+            <span class="block text-xs font-normal text-slate-500">#{{ data.header.toBranchId }}</span>
+          </dd>
+        </div>
+        <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+          <dt class="text-slate-500">Cập nhật cuối</dt>
+          <dd class="font-medium text-slate-800">{{ formatMoment(data.header.updatedAt) }}</dd>
+        </div>
+      </dl>
+
+      <div class="mt-4 flex flex-wrap gap-2">
+        @if (canShip()) {
+          <button
+            type="button"
+            class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+            [disabled]="busy()"
+            (click)="run('ship')"
+          >
+            Xuất kho (ship)
+          </button>
+        }
+        @if (canReceive()) {
+          <button
+            type="button"
+            class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+            [disabled]="busy()"
+            (click)="run('receive')"
+          >
+            Nhận hàng (receive)
+          </button>
+        }
+        @if (canCancel()) {
+          <button
+            type="button"
+            class="rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"
+            [disabled]="busy()"
+            (click)="run('cancel')"
+          >
+            Huỷ phiếu
+          </button>
+        }
+        @if (!canShip() && !canReceive() && !canCancel()) {
+          <p class="text-sm text-slate-500">
+            Không còn thao tác nào phù hợp với trạng thái hiện tại của phiếu (hoặc bạn không đủ quyền).
+          </p>
+        }
+      </div>
+    </div>
+
+    <div class="sh-card overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-3 py-2">Sản phẩm</th>
+            <th class="px-3 py-2 text-right">Số lượng</th>
+            <th class="px-3 py-2">Serial</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (item of data.items; track item.id) {
+            <tr>
+              <td class="px-3 py-2">
+                <p class="font-medium text-slate-800">{{ item.name }}</p>
+                <p class="font-mono text-xs text-slate-500">{{ item.sku }}</p>
+              </td>
+              <td class="px-3 py-2 text-right text-slate-700">{{ item.quantity }}</td>
+              <td class="px-3 py-2">
+                @if (serialsOfItem(item.id).length === 0) {
+                  <span class="text-xs text-slate-400">Không quản lý serial</span>
+                } @else {
+                  <div class="flex flex-wrap gap-1">
+                    @for (serial of serialsOfItem(item.id); track serial.serialItemId) {
+                      <span class="rounded-full px-2 py-0.5 font-mono text-xs" [class]="serialStatusClass(serial.status)">
+                        {{ serial.serialNumber }}
+                      </span>
+                    }
+                  </div>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+} @else {
+  <div class="sh-card">
+    <app-empty-state
+      icon="🔍"
+      title="Không mở được phiếu chuyển kho"
+      description="Phiếu không tồn tại hoặc không thuộc chi nhánh đi/đến của bạn (backend trả 403/404)."
+    />
+    <div class="flex justify-center pb-6">
+      <a
+        routerLink="/inventory/transfers"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        ← Về màn tạo phiếu chuyển
+      </a>
+    </div>
+  </div>
+}

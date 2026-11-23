@@ -1,0 +1,125 @@
+@if (loading()) {
+  <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tải phiếu nhập…</div>
+} @else if (detail(); as data) {
+  <section class="space-y-4">
+    <nav class="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+      <a routerLink="/inventory/receipts" class="hover:text-brand-700">Phiếu nhập kho</a>
+      <span>/</span>
+      <span class="font-mono font-medium text-slate-800">{{ data.header.receiptCode }}</span>
+      <span class="rounded-full px-2 py-1 text-xs font-medium" [class]="receiptStatusClass(data.header.status)">
+        {{ receiptStatusLabel(data.header.status) }}
+      </span>
+    </nav>
+
+    <div class="grid gap-4 lg:grid-cols-3">
+      <div class="sh-card p-4 lg:col-span-2">
+        <h1 class="sh-page-title">Phiếu nhập {{ data.header.receiptCode }}</h1>
+        <p class="text-sm text-slate-500">Tạo lúc {{ formatMoment(data.header.createdAt) }}</p>
+
+        <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+          <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+            <dt class="text-slate-500">Nhà cung cấp</dt>
+            <dd class="font-medium text-slate-800">{{ data.header.supplierName }}</dd>
+          </div>
+          <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+            <dt class="text-slate-500">Chi nhánh nhập</dt>
+            <dd class="font-medium text-slate-800">
+              {{ data.header.branchName }} (#{{ data.header.branchId }})
+            </dd>
+          </div>
+          <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+            <dt class="text-slate-500">Số hoá đơn NCC</dt>
+            <dd class="font-medium text-slate-800">{{ data.header.supplierInvoiceNo ?? '—' }}</dd>
+          </div>
+          <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+            <dt class="text-slate-500">Nhận lúc</dt>
+            <dd class="font-medium text-slate-800">{{ formatMoment(data.header.receivedAt) }}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <aside class="sh-card h-fit p-4">
+        <h2 class="text-sm font-semibold text-slate-700">Tổng kết</h2>
+        <dl class="mt-2 space-y-2 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Số dòng hàng</dt>
+            <dd class="text-slate-800">{{ data.items.length }}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Serial đã sinh</dt>
+            <dd class="text-slate-800">{{ data.serials.length }}</dd>
+          </div>
+          <div class="flex justify-between border-t border-slate-200 pt-2 text-base font-semibold">
+            <dt>Tổng tiền nhập</dt>
+            <dd class="text-brand-700">{{ formatPrice(data.header.totalAmount) }}</dd>
+          </div>
+        </dl>
+        <p class="mt-3 text-xs text-slate-500">
+          Phiếu đã ghi tăng công nợ phải trả cho nhà cung cấp theo hạn trả đã khai báo.
+        </p>
+      </aside>
+    </div>
+
+    <div class="sh-card overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-3 py-2">Sản phẩm</th>
+            <th class="px-3 py-2 text-right">Số lượng</th>
+            <th class="px-3 py-2 text-right">Đơn giá nhập</th>
+            <th class="px-3 py-2 text-right">Thành tiền</th>
+            <th class="px-3 py-2">Serial</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (item of data.items; track item.id) {
+            <tr>
+              <td class="px-3 py-2">
+                <p class="font-medium text-slate-800">{{ item.name }}</p>
+                <p class="font-mono text-xs text-slate-500">{{ item.sku }}</p>
+              </td>
+              <td class="px-3 py-2 text-right text-slate-700">{{ item.quantity }}</td>
+              <td class="px-3 py-2 text-right text-slate-700">{{ formatPrice(item.unitCost) }}</td>
+              <td class="px-3 py-2 text-right font-medium text-slate-800">
+                {{ formatPrice(item.lineTotal) }}
+              </td>
+              <td class="px-3 py-2">
+                @if (serialsOfProduct(item.productId).length === 0) {
+                  <span class="text-xs text-slate-400">Không quản lý serial</span>
+                } @else {
+                  <div class="flex flex-wrap gap-1">
+                    @for (serial of serialsOfProduct(item.productId); track serial.serialItemId) {
+                      <span
+                        class="rounded-full px-2 py-0.5 font-mono text-xs"
+                        [class]="serialStatusClass(serial.status)"
+                      >
+                        {{ serial.serialNumber }}
+                      </span>
+                    }
+                  </div>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+} @else {
+  <div class="sh-card">
+    <app-empty-state
+      icon="🔍"
+      title="Không mở được phiếu nhập"
+      description="Phiếu không tồn tại hoặc thuộc chi nhánh khác (backend trả 403/404)."
+    >
+    </app-empty-state>
+    <div class="flex justify-center pb-6">
+      <a
+        routerLink="/inventory/receipts"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        ← Về danh sách phiếu nhập
+      </a>
+    </div>
+  </div>
+}

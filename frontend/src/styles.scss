@@ -1,0 +1,227 @@
+/* =============================================================================
+   Global styles (SCSS) — chạy SAU Tailwind (xem angular.json thứ tự styles).
+   Ở đây chỉ khai báo biến toàn cục + vài class nền tảng; style chi tiết viết trong
+   từng component (SCSS) hoặc bằng class Tailwind ngay trong template.
+   KHÔNG dùng @apply ở đây để tránh phụ thuộc thứ tự xử lý của Tailwind.
+   ============================================================================= */
+
+:root {
+  --sh-header-height: 3.5rem;
+  --sh-sidebar-width: 15.5rem;
+  --sh-radius: 0.75rem;
+  --sh-shadow-card: 0 1px 2px rgb(15 23 42 / 6%), 0 8px 24px -12px rgb(15 23 42 / 12%);
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font-family: var(--font-sans);
+  color: #0f172a;
+  background-color: #f1f5f9;
+}
+
+/* Thanh cuộn gọn cho các bảng danh sách dài */
+* {
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 1px;
+}
+
+/* Class dùng chung cho app */
+.sh-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--sh-radius);
+  box-shadow: var(--sh-shadow-card);
+}
+
+.sh-page-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.sh-field-error {
+  color: var(--color-danger);
+  font-size: 0.8125rem;
+  margin-top: 0.25rem;
+}
+
+.sh-input-invalid {
+  border-color: var(--color-danger) !important;
+}
+
+/* =============================================================================
+   KHU VỰC KHÁCH HÀNG (PublicLayout) — lớp theme `sh-public`
+   -----------------------------------------------------------------------------
+   Các màn hình của luồng mua hàng (đặt hàng, chi tiết sản phẩm…) được viết theo tông SÁNG
+   (sh-card, text-slate-700, bg-slate-50…). Khi chạy trong khung khách hàng (nền tối như /shop, /cart)
+   ta MAP LẠI các class đó trong phạm vi `.sh-public` để giao diện đồng nhất mà KHÔNG phải sửa template
+   ⇒ giữ nguyên 100% logic nghiệp vụ của từng màn hình.
+   Selector `.sh-public .x` có độ ưu tiên cao hơn `.x` của Tailwind nên ghi đè an toàn.
+   ============================================================================= */
+.sh-public {
+  /* Chữ mặc định sáng để ô nhập/kế thừa không bị đen trên nền tối */
+  color: #e2e8f0;
+}
+
+/* Thẻ nội dung + tiêu đề trang */
+.sh-public .sh-card {
+  background-color: #0f172a;
+  border-color: rgb(255 255 255 / 10%);
+  color: #e2e8f0;
+}
+
+.sh-public .sh-page-title {
+  color: #fff;
+}
+
+/* Nền khối */
+.sh-public .bg-white {
+  background-color: #0f172a;
+}
+
+.sh-public .bg-slate-50 {
+  background-color: rgb(255 255 255 / 5%);
+}
+
+.sh-public .bg-slate-100 {
+  background-color: rgb(255 255 255 / 8%);
+}
+
+.sh-public .bg-slate-200 {
+  background-color: rgb(255 255 255 / 12%);
+}
+
+/* Viền & đường kẻ bảng */
+.sh-public .border-slate-200 {
+  border-color: rgb(255 255 255 / 10%);
+}
+
+.sh-public .border-slate-300 {
+  border-color: rgb(255 255 255 / 18%);
+}
+
+.sh-public .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgb(255 255 255 / 8%);
+}
+
+.sh-public .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgb(255 255 255 / 10%);
+}
+
+/* Chữ */
+.sh-public .text-slate-800 {
+  color: #f1f5f9;
+}
+
+.sh-public .text-slate-700 {
+  color: #e2e8f0;
+}
+
+.sh-public .text-slate-600 {
+  color: #cbd5e1;
+}
+
+.sh-public .text-slate-500 {
+  color: #9aa9bd;
+}
+
+.sh-public .text-slate-400 {
+  color: #94a3b8;
+}
+
+.sh-public .text-brand-700,
+.sh-public .text-brand-800 {
+  color: var(--color-brand-300);
+}
+
+/* Nhãn trạng thái: nền nhạt + chữ đậm của tông sáng ⇒ nền mờ + chữ sáng trên tông tối */
+.sh-public .bg-emerald-50,
+.sh-public .bg-emerald-100 {
+  background-color: rgb(16 185 129 / 15%);
+}
+
+.sh-public .border-emerald-200 {
+  border-color: rgb(16 185 129 / 35%);
+}
+
+.sh-public .text-emerald-600,
+.sh-public .text-emerald-700,
+.sh-public .text-emerald-800 {
+  color: #6ee7b7;
+}
+
+.sh-public .bg-amber-50 {
+  background-color: rgb(245 158 11 / 12%);
+}
+
+.sh-public .border-amber-200 {
+  border-color: rgb(245 158 11 / 35%);
+}
+
+.sh-public .text-amber-700,
+.sh-public .text-amber-800,
+.sh-public .text-amber-900 {
+  color: #fcd34d;
+}
+
+.sh-public .bg-rose-50,
+.sh-public .bg-rose-100 {
+  background-color: rgb(244 63 94 / 15%);
+}
+
+.sh-public .text-rose-600,
+.sh-public .text-rose-700,
+.sh-public .text-rose-800 {
+  color: #fda4af;
+}
+
+.sh-public .bg-brand-100 {
+  background-color: rgb(47 134 246 / 18%);
+}
+
+/* Ô nhập liệu / select / textarea */
+.sh-public input:not([type='checkbox']):not([type='radio']),
+.sh-public select,
+.sh-public textarea {
+  background-color: #0f172a;
+  border-color: rgb(255 255 255 / 18%);
+  color: #e2e8f0;
+}
+
+.sh-public input::placeholder,
+.sh-public textarea::placeholder {
+  color: #7c8aa0;
+}
+
+.sh-public select option {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+.sh-public input[type='checkbox'],
+.sh-public input[type='radio'] {
+  accent-color: var(--color-brand-500);
+}
+
+/* Nút phụ: hover nền sáng ⇒ nền mờ */
+.sh-public .hover\:bg-slate-50:hover,
+.sh-public .hover\:bg-slate-100:hover {
+  background-color: rgb(255 255 255 / 10%);
+}
+

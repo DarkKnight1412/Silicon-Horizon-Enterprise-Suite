@@ -1,0 +1,108 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Báo cáo serial theo trạng thái</h1>
+      <p class="text-sm text-slate-500">
+        Số lượng serial theo từng trạng thái · chỉ hiện trạng thái đang có serial.
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2 text-sm">
+      <a routerLink="/reports/inventory" class="rounded-md border border-slate-300 px-3 py-1.5 text-slate-700 hover:bg-slate-50">
+        Tồn kho
+      </a>
+      <a routerLink="/inventory/serials" class="rounded-md border border-slate-300 px-3 py-1.5 text-slate-700 hover:bg-slate-50">
+        Tra cứu serial
+      </a>
+    </div>
+  </header>
+
+  <form class="sh-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4" [formGroup]="filters" (ngSubmit)="load()" novalidate>
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="productId">
+        Mã sản phẩm (bỏ trống = mọi sản phẩm)
+      </label>
+      <input
+        id="productId"
+        type="number"
+        min="1"
+        formControlName="productId"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+      @if (filters.controls.productId.touched && filters.controls.productId.invalid) {
+        <p class="sh-field-error">Mã sản phẩm phải là số dương.</p>
+      }
+    </div>
+
+    @if (isAdmin()) {
+      <app-report-branch-select
+        [control]="branchId"
+        [branches]="branches()"
+        controlId="serialBranchId"
+      />
+    }
+
+    <div class="flex items-end gap-2">
+      <button
+        type="submit"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+      >
+        Xem báo cáo
+      </button>
+      <button
+        type="button"
+        class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+        (click)="resetFilters()"
+      >
+        Xoá lọc
+      </button>
+    </div>
+  </form>
+
+  @if (loading()) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang đếm serial…</div>
+  } @else if (rows().length === 0) {
+    <div class="sh-card">
+      <app-empty-state
+        icon="🔢"
+        title="Không có serial nào khớp bộ lọc"
+        description="Thử bỏ lọc sản phẩm hoặc chọn phạm vi chi nhánh khác."
+      />
+    </div>
+  } @else {
+    <div class="sh-card p-4">
+      <p class="text-xs uppercase text-slate-500">Tổng số serial đang theo dõi</p>
+      <p class="mt-1 text-2xl font-semibold text-slate-800">{{ formatCount(totalQuantity()) }}</p>
+    </div>
+
+    <div class="sh-card overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-3 py-2">Trạng thái</th>
+            <th class="px-3 py-2 text-right">Số lượng</th>
+            <th class="px-3 py-2 text-right">Tỷ lệ</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (row of rows(); track row.status) {
+            <tr>
+              <td class="px-3 py-2">
+                <span
+                  class="rounded-full px-2 py-1 text-xs font-medium"
+                  [class]="statusClass(row.status)"
+                >
+                  {{ row.statusName }}
+                </span>
+                <span class="ml-2 text-xs text-slate-500">mã {{ row.status }}</span>
+              </td>
+              <td class="px-3 py-2 text-right font-medium text-slate-800">
+                {{ formatCount(row.quantity) }}
+              </td>
+              <td class="px-3 py-2 text-right text-slate-600">{{ sharePercent(row.quantity) }}%</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

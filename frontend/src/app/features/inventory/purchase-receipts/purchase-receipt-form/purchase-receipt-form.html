@@ -1,0 +1,172 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Tạo phiếu nhập kho</h1>
+      <p class="text-sm text-slate-500">
+        Phiếu được ghi nhận HOÀN TẤT ngay: cộng tồn, sinh serial và ghi tăng công nợ phải trả theo hạn
+        trả của nhà cung cấp. Hàng nhập về chi nhánh của bạn (lấy từ tài khoản đăng nhập).
+      </p>
+    </div>
+    <a
+      routerLink="/inventory/receipts"
+      class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+    >
+      ← Danh sách phiếu nhập
+    </a>
+  </header>
+
+  <form class="sh-card grid gap-3 p-4 sm:grid-cols-2" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="supplierId">
+        Nhà cung cấp <span class="text-rose-600">*</span>
+      </label>
+      <select
+        id="supplierId"
+        formControlName="supplierId"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        [class.sh-input-invalid]="form.controls.supplierId.touched && form.controls.supplierId.invalid"
+      >
+        <option [ngValue]="null">— Chọn nhà cung cấp —</option>
+        @for (supplier of suppliers(); track supplier.id) {
+          <option [ngValue]="supplier.id">
+            {{ supplier.code }} · {{ supplier.name }} (nợ {{ supplier.paymentTermDays }} ngày)
+          </option>
+        }
+      </select>
+      @if (form.controls.supplierId.touched && form.controls.supplierId.invalid) {
+        <p class="sh-field-error">Vui lòng chọn nhà cung cấp.</p>
+      }
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="supplierInvoiceNo">
+        Số hoá đơn của nhà cung cấp
+      </label>
+      <input
+        id="supplierInvoiceNo"
+        type="text"
+        formControlName="supplierInvoiceNo"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+      @if (form.controls.supplierInvoiceNo.touched && form.controls.supplierInvoiceNo.invalid) {
+        <p class="sh-field-error">Số hoá đơn tối đa 50 ký tự.</p>
+      }
+    </div>
+  </form>
+
+  <div class="sh-card space-y-3 p-4">
+    <h2 class="text-sm font-semibold text-slate-700">Chọn sản phẩm để thêm dòng hàng</h2>
+    <app-product-picker
+      [keyword]="productKeyword"
+      [results]="productResults()"
+      [searching]="searching()"
+      [searched]="searched()"
+      (search)="searchProducts()"
+      (picked)="addLine($event)"
+    />
+  </div>
+
+  <div class="sh-card overflow-x-auto">
+    @if (lines.length === 0) {
+      <p class="p-6 text-center text-sm text-slate-500">
+        Chưa có dòng hàng nào — tìm và chọn sản phẩm ở khối phía trên.
+      </p>
+    } @else {
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-3 py-2">Sản phẩm</th>
+            <th class="w-24 px-3 py-2">Số lượng</th>
+            <th class="w-36 px-3 py-2">Đơn giá nhập</th>
+            <th class="w-32 px-3 py-2 text-right">Thành tiền</th>
+            <th class="px-3 py-2"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (line of lines.controls; track line; let index = $index) {
+            <tr [formGroup]="line">
+              <td class="px-3 py-2 align-top">
+                <p class="font-medium text-slate-800">{{ line.controls.name.value }}</p>
+                <p class="font-mono text-xs text-slate-500">{{ line.controls.sku.value }}</p>
+
+                @if (line.controls.requiresSerial.value) {
+                  <label class="mt-2 block text-xs font-medium text-amber-800" [attr.for]="'serials-' + index">
+                    Serial — mỗi dòng một số, cần đúng {{ line.controls.quantity.value ?? 0 }}
+                  </label>
+                  <textarea
+                    [id]="'serials-' + index"
+                    rows="3"
+                    formControlName="serialsText"
+                    class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 font-mono text-xs"
+                  ></textarea>
+                  <p class="mt-1 text-xs text-slate-500">
+                    Đã nhập {{ serialCount(line) }} serial.
+                    @if (serialMismatch(line)) {
+                      <span class="text-rose-600">Số serial chưa khớp số lượng.</span>
+                    }
+                    @if (duplicateSerials(line)) {
+                      <span class="text-rose-600">Có serial bị lặp.</span>
+                    }
+                  </p>
+                }
+              </td>
+              <td class="px-3 py-2 align-top">
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  formControlName="quantity"
+                  class="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                  [class.sh-input-invalid]="line.controls.quantity.touched && line.controls.quantity.invalid"
+                />
+                @if (line.controls.quantity.touched && line.controls.quantity.invalid) {
+                  <p class="sh-field-error">Số lượng từ 1 trở lên.</p>
+                }
+              </td>
+              <td class="px-3 py-2 align-top">
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  formControlName="unitCost"
+                  class="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                  [class.sh-input-invalid]="line.controls.unitCost.touched && line.controls.unitCost.invalid"
+                />
+                @if (line.controls.unitCost.touched && line.controls.unitCost.invalid) {
+                  <p class="sh-field-error">Đơn giá bắt buộc, không âm.</p>
+                }
+              </td>
+              <td class="px-3 py-2 text-right align-top text-slate-700">
+                {{ formatPrice((line.controls.quantity.value ?? 0) * (line.controls.unitCost.value ?? 0)) }}
+              </td>
+              <td class="px-3 py-2 text-right align-top">
+                <button
+                  type="button"
+                  class="rounded-md px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50"
+                  (click)="removeLine(index)"
+                >
+                  Xoá dòng
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+
+
+  <div class="sh-card flex flex-wrap items-center justify-between gap-3 p-4">
+    <p class="text-sm text-slate-600">
+      Tạm tính: <span class="font-semibold text-slate-900">{{ formatPrice(estimatedTotal()) }}</span>
+    </p>
+    <button
+      type="button"
+      class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+      [disabled]="submitting()"
+      (click)="submit()"
+    >
+      {{ submitting() ? 'Đang nhập kho…' : 'Xác nhận nhập kho' }}
+    </button>
+  </div>
+</section>

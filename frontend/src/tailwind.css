@@ -1,0 +1,36 @@
+/* =============================================================================
+   Tailwind CSS v4 — ĐIỂM VÀO DUY NHẤT
+   -----------------------------------------------------------------------------
+   File này cố ý là .css (không phải .scss): Tailwind được xử lý bởi PostCSS
+   (.postcssrc.json) và nếu để Sass xử lý trước sẽ lỗi `@import "tailwindcss"`.
+   Thứ tự trong angular.json: src/tailwind.css → src/styles.scss
+   ============================================================================= */
+@import "tailwindcss";
+
+/* Design tokens (Tailwind v4 khai báo theme bằng CSS, KHÔNG cần file config JS) */
+@theme {
+  /* Màu thương hiệu (xanh kỹ thuật) */
+  --color-brand-50: #eef6ff;
+  --color-brand-100: #d9ecff;
+  --color-brand-200: #bcdcff;
+  --color-brand-300: #8ec6ff;
+  --color-brand-400: #59a6ff;
+  --color-brand-500: #2f86f6;
+  --color-brand-600: #1a68dc;
+  --color-brand-700: #1653b0;
+  --color-brand-800: #17458c;
+  --color-brand-900: #183b73;
+
+  /* Màu trạng thái nghiệp vụ */
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+  --color-info: #0ea5e9;
+
+  /* Font */
+  --font-sans: "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", Consolas, monospace;
+
+  /* Bo góc */
+  --radius-card: 0.75rem;
+}

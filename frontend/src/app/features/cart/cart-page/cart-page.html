@@ -1,0 +1,183 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Giỏ hàng</h1>
+      <p class="text-sm text-slate-500">
+        {{ items().length }} dòng · {{ totals().selectedCount }} dòng đang chọn
+      </p>
+    </div>
+    <a routerLink="/catalog/products" class="text-sm text-brand-700 hover:underline">
+      ← Tiếp tục mua sắm
+    </a>
+  </header>
+
+  @if (!isAuthenticated()) {
+    <div class="sh-card border-l-4 border-l-sky-500 p-4 text-sm text-slate-600">
+      Bạn đang mua với tư cách <strong>khách vãng lai</strong> (giỏ giữ theo mã phiên trình duyệt).
+      <a routerLink="/login" class="font-medium text-brand-700 hover:underline">Đăng nhập</a>
+      để lưu giỏ theo tài khoản và đặt hàng.
+    </div>
+  }
+
+  @if (warnings().length > 0) {
+    <div class="sh-card border-l-4 border-l-amber-500 p-4">
+      <p class="text-sm font-semibold text-amber-800">Giỏ hàng vừa được điều chỉnh theo tồn kho</p>
+      <ul class="mt-1 space-y-1 text-sm text-amber-900">
+        @for (warning of warnings(); track warning.productId) {
+          <li>
+            <span class="font-medium">{{ warning.name }}</span>
+            — {{ warningLabel(warning.code) }}
+            ({{ warning.oldQuantity }} → {{ warning.newQuantity }})
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
+  @if (loading() && items().length === 0) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tải giỏ hàng…</div>
+  } @else if (items().length === 0) {
+    <div class="sh-card">
+      <app-empty-state
+        icon="🛒"
+        title="Giỏ hàng đang trống"
+        description="Thêm sản phẩm từ danh mục để bắt đầu đặt hàng."
+        actionLabel="Xem sản phẩm"
+        (action)="goToCatalog()"
+      />
+    </div>
+  } @else {
+    <div class="grid gap-4 lg:grid-cols-3">
+      <div class="sh-card overflow-x-auto lg:col-span-2">
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <tr>
+              <th class="w-10 px-3 py-2">
+                <input
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-slate-300"
+                  aria-label="Chọn tất cả"
+                  [checked]="allSelected()"
+                  (change)="selectAll(!allSelected())"
+                />
+              </th>
+              <th class="px-3 py-2">Sản phẩm</th>
+              <th class="px-3 py-2">Đơn giá</th>
+              <th class="px-3 py-2">Số lượng</th>
+              <th class="px-3 py-2">Thành tiền</th>
+              <th class="px-3 py-2"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (item of items(); track item.productId) {
+              <tr [class.opacity-60]="!item.isSelected">
+                <td class="px-3 py-2">
+                  <input
+                    type="checkbox"
+                    class="h-4 w-4 rounded border-slate-300"
+                    [attr.aria-label]="'Chọn ' + item.name"
+                    [checked]="item.isSelected"
+                    [disabled]="busyProductId() === item.productId"
+                    (change)="toggleSelect(item)"
+                  />
+                </td>
+                <td class="px-3 py-2">
+                  <div class="flex items-center gap-3">
+                    @if (item.imageUrl) {
+                      <img class="h-12 w-12 rounded object-cover" [src]="item.imageUrl" [alt]="item.name" />
+                    } @else {
+                      <span class="grid h-12 w-12 place-items-center rounded bg-slate-100">🖥️</span>
+                    }
+                    <div>
+                      <a
+                        class="font-medium text-slate-800 hover:text-brand-700"
+                        [routerLink]="['/catalog/products', item.productId]"
+                      >
+                        {{ item.name }}
+                      </a>
+                      <p class="text-xs text-slate-500">{{ item.sku }} · còn {{ item.availableQty }}</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-3 py-2">
+                  <p class="font-medium text-slate-800">{{ formatPrice(item.unitPrice) }}</p>
+                  @if (item.discountPerUnit > 0) {
+                    <p class="text-xs text-slate-400 line-through">
+                      {{ formatPrice(item.basePrice) }}
+                    </p>
+                  }
+                </td>
+                <td class="px-3 py-2">
+                  <div class="inline-flex items-center rounded-md border border-slate-300">
+                    <button
+                      type="button"
+                      class="px-2 py-1 disabled:opacity-40"
+                      [disabled]="busyProductId() === item.productId"
+                      (click)="decrease(item)"
+                    >
+                      −
+                    </button>
+                    <span class="min-w-8 border-x border-slate-200 px-2 py-1 text-center">
+                      {{ item.quantity }}
+                    </span>
+                    <button
+                      type="button"
+                      class="px-2 py-1 disabled:opacity-40"
+                      [disabled]="busyProductId() === item.productId || item.quantity >= item.availableQty"
+                      (click)="increase(item)"
+                    >
+                      +
+                    </button>
+                  </div>
+                </td>
+                <td class="px-3 py-2 font-medium text-slate-800">{{ formatPrice(item.lineTotal) }}</td>
+                <td class="px-3 py-2 text-right">
+                  <button
+                    type="button"
+                    class="rounded-md px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50"
+                    (click)="remove(item)"
+                  >
+                    Xoá
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Tóm tắt tiền: chỉ tính các dòng đang được tick -->
+      <aside class="sh-card h-fit p-4">
+        <h2 class="text-sm font-semibold text-slate-700">Tóm tắt đơn hàng</h2>
+
+        <dl class="mt-3 space-y-2 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Tạm tính</dt>
+            <dd class="text-slate-800">{{ formatPrice(totals().subTotal) }}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Giảm giá</dt>
+            <dd class="text-emerald-700">−{{ formatPrice(totals().discountTotal) }}</dd>
+          </div>
+          <div class="flex justify-between border-t border-slate-200 pt-2 text-base font-semibold">
+            <dt>Tổng cộng</dt>
+            <dd class="text-brand-700">{{ formatPrice(totals().total) }}</dd>
+          </div>
+        </dl>
+
+        <button
+          type="button"
+          class="mt-4 w-full rounded-md bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+          [disabled]="!canCheckout()"
+          (click)="goToCheckout()"
+        >
+          Tiến hành đặt hàng
+        </button>
+
+        @if (!canCheckout()) {
+          <p class="mt-2 text-xs text-slate-500">Chọn ít nhất một dòng để đặt hàng.</p>
+        }
+      </aside>
+    </div>
+  }
+</section>

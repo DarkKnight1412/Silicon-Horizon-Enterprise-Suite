@@ -1,0 +1,405 @@
+@let detail = current();
+@let head = header();
+
+<section class="space-y-4">
+  <nav class="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+    <a routerLink="/orders" class="hover:text-brand-700">Đơn hàng</a>
+    <span>/</span>
+    <span class="font-medium text-slate-800">{{ head.orderCode }}</span>
+    <span class="rounded-full px-2 py-1 text-xs font-medium" [class]="statusClass(head.status)">
+      {{ statusLabel(head.status) }}
+    </span>
+    @if (busy()) {
+      <span class="text-xs text-slate-400">Đang xử lý…</span>
+    }
+  </nav>
+
+  <div class="grid gap-4 lg:grid-cols-3">
+    <div class="sh-card p-4 lg:col-span-2">
+      <h1 class="sh-page-title">Đơn {{ head.orderCode }}</h1>
+      <p class="text-sm text-slate-500">Tạo lúc {{ formatMoment(head.createdAt) }}</p>
+
+      <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+        <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+          <dt class="text-slate-500">Khách hàng</dt>
+          <dd class="text-right font-medium text-slate-800">
+            {{ head.customerName }}
+            @if (head.customerPhone) {
+              <span class="block text-xs font-normal text-slate-500">{{ head.customerPhone }}</span>
+            }
+          </dd>
+        </div>
+        <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+          <dt class="text-slate-500">Chi nhánh</dt>
+          <dd class="font-medium text-slate-800">{{ head.branchName }} (#{{ head.branchId }})</dd>
+        </div>
+        <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+          <dt class="text-slate-500">Kênh bán</dt>
+          <dd class="font-medium text-slate-800">{{ channelLabel(head.channel) }}</dd>
+        </div>
+        <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+          <dt class="text-slate-500">Hình thức nhận</dt>
+          <dd class="font-medium text-slate-800">{{ fulfillmentLabel(head.fulfillmentType) }}</dd>
+        </div>
+        <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+          <dt class="text-slate-500">Thanh toán</dt>
+          <dd class="text-right font-medium text-slate-800">
+            {{ paymentMethodLabel(head.paymentMethod) }}
+            <span class="block text-xs font-normal text-slate-500">
+              {{ paymentStatusLabel(head.paymentStatus) }}
+            </span>
+          </dd>
+        </div>
+        <div class="flex justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+          <dt class="text-slate-500">Hạn giữ / nhận hàng</dt>
+          <dd class="font-medium text-slate-800">{{ formatMoment(head.expiresAt) }}</dd>
+        </div>
+      </dl>
+
+      @if (head.fulfillmentType === 0) {
+        <div class="mt-3 rounded-md border border-slate-200 p-3 text-sm">
+          <p class="font-medium text-slate-700">Giao đến</p>
+          <p class="mt-1 text-slate-600">
+            {{ head.recipientName ?? '—' }}
+            @if (head.recipientPhone) {
+              · {{ head.recipientPhone }}
+            }
+          </p>
+          <p class="text-slate-600">{{ head.shippingAddress ?? '—' }}</p>
+        </div>
+      }
+
+      @if (head.note) {
+        <p class="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          Ghi chú: {{ head.note }}
+        </p>
+      }
+    </div>
+
+    <aside class="sh-card h-fit p-4">
+      <h2 class="text-sm font-semibold text-slate-700">Tổng tiền</h2>
+      <dl class="mt-2 space-y-2 text-sm">
+        <div class="flex justify-between">
+          <dt class="text-slate-500">Tạm tính</dt>
+          <dd class="text-slate-800">{{ formatPrice(head.subTotal) }}</dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-slate-500">Giảm giá</dt>
+          <dd class="text-emerald-700">−{{ formatPrice(head.discountTotal) }}</dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-slate-500">Phí vận chuyển</dt>
+          <dd class="text-slate-800">{{ formatPrice(head.shippingFee) }}</dd>
+        </div>
+        <div class="flex justify-between border-t border-slate-200 pt-2 text-base font-semibold">
+          <dt>Tổng cộng</dt>
+          <dd class="text-brand-700">{{ formatPrice(head.grandTotal) }}</dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-slate-500">Đã thanh toán</dt>
+          <dd class="text-slate-800">{{ formatPrice(head.paidAmount) }}</dd>
+        </div>
+      </dl>
+    </aside>
+  </div>
+
+  <!-- Dòng hàng (snapshot giá tại thời điểm đặt) -->
+  <div class="sh-card overflow-x-auto">
+    <table class="min-w-full divide-y divide-slate-200 text-sm">
+      <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+        <tr>
+          <th class="px-3 py-2">Sản phẩm</th>
+          <th class="px-3 py-2 text-right">Đơn giá</th>
+          <th class="px-3 py-2 text-right">SL</th>
+          <th class="px-3 py-2 text-right">Giảm</th>
+          <th class="px-3 py-2 text-right">Thành tiền</th>
+          <th class="px-3 py-2">Serial</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        @for (item of detail.items; track item.id) {
+          <tr>
+            <td class="px-3 py-2">
+              <a
+                class="font-medium text-slate-800 hover:text-brand-700"
+                [routerLink]="['/catalog/products', item.productId]"
+              >
+                {{ item.productName }}
+              </a>
+              <p class="text-xs text-slate-500">
+                {{ item.sku }} · bảo hành {{ item.warrantyMonths }} tháng
+              </p>
+            </td>
+            <td class="px-3 py-2 text-right text-slate-700">{{ formatPrice(item.unitPrice) }}</td>
+            <td class="px-3 py-2 text-right text-slate-700">{{ item.quantity }}</td>
+            <td class="px-3 py-2 text-right text-emerald-700">−{{ formatPrice(item.discountAmount) }}</td>
+            <td class="px-3 py-2 text-right font-medium text-slate-800">
+              {{ formatPrice(item.lineTotal) }}
+            </td>
+            <td class="px-3 py-2 text-xs text-slate-500">
+              @if (item.requiresSerial) {
+                {{ item.serialAssignedCount }}/{{ item.quantity }} đã gán
+              } @else {
+                Không cần
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid gap-4 lg:grid-cols-2">
+    <!-- Serial đã gán vào đơn (rỗng khi đơn chưa qua bước đóng gói) -->
+    <div class="sh-card p-4">
+      <h2 class="text-sm font-semibold text-slate-700">Serial đã gán</h2>
+      @if (detail.serials.length === 0) {
+        <p class="mt-2 text-sm text-slate-500">Đơn chưa gán serial nào.</p>
+      } @else {
+        <ul class="mt-2 space-y-1 text-sm">
+          @for (serial of detail.serials; track serial.serialItemId) {
+            <li class="flex items-center justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+              <span class="font-mono text-slate-800">{{ serial.serialNumber }}</span>
+              <span class="text-xs text-slate-500">
+                {{ serialStatusLabel(serial.status) }}
+                @if (serial.warrantyEndDate) {
+                  · BH đến {{ formatMoment(serial.warrantyEndDate) }}
+                }
+              </span>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    <!-- Giao dịch thanh toán / hoàn tiền -->
+    <div class="sh-card p-4">
+      <h2 class="text-sm font-semibold text-slate-700">Giao dịch</h2>
+      @if (detail.payments.length === 0) {
+        <p class="mt-2 text-sm text-slate-500">Chưa có giao dịch nào.</p>
+      } @else {
+        <ul class="mt-2 space-y-1 text-sm">
+          @for (payment of detail.payments; track payment.id) {
+            <li class="flex items-center justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+              <span class="text-slate-700">
+                {{ payment.paymentType === 0 ? 'Thu tiền' : 'Hoàn tiền' }} ·
+                {{ paymentMethodLabel(payment.method) }}
+              </span>
+              <span
+                class="font-medium"
+                [class]="payment.paymentType === 0 ? 'text-slate-800' : 'text-rose-700'"
+              >
+                {{ formatPrice(payment.amount) }}
+              </span>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    <!-- Lịch sử chuyển trạng thái (ORD-08) -->
+    <div class="sh-card p-4">
+      <h2 class="text-sm font-semibold text-slate-700">Lịch sử trạng thái</h2>
+      @if (detail.statusHistory.length === 0) {
+        <p class="mt-2 text-sm text-slate-500">Chưa có bản ghi chuyển trạng thái.</p>
+      } @else {
+        <ol class="mt-2 space-y-2 text-sm">
+          @for (entry of detail.statusHistory; track entry.changedAt) {
+            <li class="border-l-2 border-slate-200 pl-3">
+              <p class="font-medium text-slate-800">
+                {{ entry.fromStatus === null ? 'Tạo đơn' : statusLabel(entry.fromStatus) }}
+                → {{ statusLabel(entry.toStatus) }}
+              </p>
+              <p class="text-xs text-slate-500">
+                {{ formatMoment(entry.changedAt) }}
+                · {{ entry.changedBy === null ? 'Hệ thống' : 'Người dùng #' + entry.changedBy }}
+              </p>
+              @if (entry.reason) {
+                <p class="text-xs text-amber-700">Lý do: {{ entry.reason }}</p>
+              }
+            </li>
+          }
+        </ol>
+      }
+    </div>
+
+    <!-- Nhân viên tư vấn và tỷ lệ chia doanh số (KPI-01/KPI-02) -->
+    <div class="sh-card p-4">
+      <h2 class="text-sm font-semibold text-slate-700">Nhân viên tư vấn</h2>
+      @if (detail.salesStaff.length === 0) {
+        <p class="mt-2 text-sm text-slate-500">Chưa phân chia doanh số cho nhân viên nào.</p>
+      } @else {
+        <ul class="mt-2 space-y-1 text-sm">
+          @for (staff of detail.salesStaff; track staff.employeeId) {
+            <li class="flex items-center justify-between gap-2 rounded bg-slate-50 px-3 py-2">
+              <span class="text-slate-700">
+                {{ staff.fullName }}
+                @if (staff.isPrimary) {
+                  <span class="ml-1 rounded bg-brand-100 px-1.5 py-0.5 text-[11px] text-brand-800">
+                    chính
+                  </span>
+                }
+              </span>
+              <span class="text-slate-800">{{ staff.shareRate }}%</span>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </div>
+  <!--
+    Khối THANH TOÁN (feature payments): ghi nhận thanh toán / hoàn tiền + cảnh báo needsReview.
+    Chỉ là khối nhúng nên không có route riêng — thanh toán luôn gắn với một đơn.
+  -->
+  <app-order-payment-panel
+    [orderId]="head.id"
+    [grandTotal]="head.grandTotal"
+    [paidAmount]="head.paidAmount"
+    [orderStatus]="head.status"
+    [orderPaymentMethod]="head.paymentMethod"
+    (changed)="onPaymentChanged()"
+  />
+
+  <!--
+    Bảng hành động: chỉ hiện nút khi ĐÚNG vai trò và ĐÚNG trạng thái mà backend cho phép,
+    nhờ vậy người dùng không bấm rồi nhận 403/409.
+  -->
+  @if (hasAnyAction()) {
+    <div class="sh-card p-4">
+      <h2 class="text-sm font-semibold text-slate-700">Hành động</h2>
+
+      <div class="mt-3 flex flex-wrap gap-2">
+        @if (canCancelMine()) {
+          <button
+            type="button"
+            class="rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-700"
+            [disabled]="busy()"
+            (click)="openReason('cancel')"
+          >
+            Hủy đơn của tôi
+          </button>
+        }
+
+        @if (canConfirm()) {
+          <button
+            type="button"
+            class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+            [disabled]="busy()"
+            (click)="confirmOrder()"
+          >
+            Xác nhận đơn
+          </button>
+        }
+
+        @if (canStartPacking()) {
+          <button
+            type="button"
+            class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+            [disabled]="busy()"
+            (click)="startPacking()"
+          >
+            Bắt đầu đóng gói
+          </button>
+        }
+
+        @if (canMarkReady()) {
+          <button
+            type="button"
+            class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+            [disabled]="busy()"
+            (click)="markReady()"
+          >
+            Đóng gói xong
+          </button>
+        }
+
+        @if (canComplete()) {
+          <button
+            type="button"
+            class="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+            [disabled]="busy()"
+            (click)="complete()"
+          >
+            Hoàn tất đơn
+          </button>
+          <button
+            type="button"
+            class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+            [disabled]="busy()"
+            (click)="openReason('delivery-failed')"
+          >
+            Ghi nhận giao thất bại
+          </button>
+        }
+
+        @if (canRetryDelivery()) {
+          <button
+            type="button"
+            class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+            [disabled]="busy()"
+            (click)="retryDelivery()"
+          >
+            Giao lại
+          </button>
+        }
+
+        @if (canCancelApproved()) {
+          <button
+            type="button"
+            class="rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-700"
+            [disabled]="busy()"
+            (click)="openReason('cancel-approved')"
+          >
+            Hủy đơn (Quản lý/Admin)
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Hộp thoại nhập lý do (bắt buộc theo ORD-08) -->
+  @if (reasonAction(); as action) {
+    <div class="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4">
+      <div class="sh-card w-full max-w-md p-5">
+        <h2 class="sh-page-title">
+          @if (action === 'delivery-failed') {
+            Lý do giao thất bại
+          } @else {
+            Lý do hủy đơn
+          }
+        </h2>
+        <label class="mt-3 block text-sm font-medium text-slate-700" for="reason">
+          Lý do <span class="text-rose-600">*</span>
+        </label>
+        <textarea
+          id="reason"
+          rows="3"
+          [formControl]="reason"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        ></textarea>
+        @if (reason.touched && reason.invalid) {
+          <p class="sh-field-error">Vui lòng nhập lý do (tối đa 300 ký tự).</p>
+        }
+        <div class="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+            (click)="closeReason()"
+          >
+            Đóng
+          </button>
+          <button
+            type="button"
+            class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+            [disabled]="busy()"
+            (click)="submitReason()"
+          >
+            Gửi
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</section>
+
+

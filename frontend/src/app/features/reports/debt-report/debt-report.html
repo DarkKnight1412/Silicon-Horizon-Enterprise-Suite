@@ -1,0 +1,164 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Báo cáo công nợ</h1>
+      <p class="text-sm text-slate-500">
+        Công nợ phải thu (khách) và phải trả (nhà cung cấp) kèm phần quá hạn · chỉ Admin xem được
+        (proc không lọc theo chi nhánh).
+      </p>
+    </div>
+    <button
+      type="button"
+      class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+      [disabled]="loading()"
+      (click)="load()"
+    >
+      {{ loading() ? 'Đang tải…' : 'Tải lại' }}
+    </button>
+  </header>
+
+  @if (loading()) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tổng hợp công nợ…</div>
+  } @else if (report(); as data) {
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="sh-card p-4">
+        <p class="text-xs uppercase text-slate-500">Phải thu khách</p>
+        <p class="mt-1 text-lg font-semibold text-slate-800">
+          {{ formatPrice(totals().customerBalance) }}
+        </p>
+      </div>
+      <div class="sh-card p-4">
+        <p class="text-xs uppercase text-slate-500">Trong đó quá hạn</p>
+        <p class="mt-1 text-lg font-semibold text-rose-700">
+          {{ formatPrice(totals().customerOverdue) }}
+        </p>
+      </div>
+      <div class="sh-card p-4">
+        <p class="text-xs uppercase text-slate-500">Phải trả NCC</p>
+        <p class="mt-1 text-lg font-semibold text-slate-800">
+          {{ formatPrice(totals().supplierBalance) }}
+        </p>
+      </div>
+      <div class="sh-card p-4">
+        <p class="text-xs uppercase text-slate-500">Trong đó quá hạn</p>
+        <p class="mt-1 text-lg font-semibold text-rose-700">
+          {{ formatPrice(totals().supplierOverdue) }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Công nợ phải thu của khách -->
+    <div class="sh-card overflow-x-auto">
+      <h2 class="px-3 py-2 text-sm font-semibold text-slate-700">
+        Phải thu khách hàng ({{ data.customers.length }})
+      </h2>
+
+      @if (data.customers.length === 0) {
+        <app-empty-state icon="✅" title="Không có khách hàng nào còn nợ." />
+      } @else {
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <tr>
+              <th class="px-3 py-2">Khách hàng</th>
+              <th class="px-3 py-2">Số điện thoại</th>
+              <th class="px-3 py-2 text-right">Hạn mức</th>
+              <th class="px-3 py-2 text-right">Dư nợ</th>
+              <th class="px-3 py-2 text-right">Quá hạn</th>
+              <th class="px-3 py-2 text-right">Sao kê</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (row of data.customers; track row.customerId) {
+              <tr>
+                <td class="px-3 py-2 text-slate-800">
+                  {{ row.fullName }}
+                  <span class="block text-xs text-slate-500">#{{ row.customerId }}</span>
+                </td>
+                <td class="px-3 py-2 text-slate-600">{{ row.phone ?? '—' }}</td>
+                <td class="px-3 py-2 text-right text-slate-700">
+                  {{ formatPrice(row.creditLimit) }}
+                </td>
+                <td class="px-3 py-2 text-right font-medium text-slate-800">
+                  {{ formatPrice(row.balance) }}
+                </td>
+                <td class="px-3 py-2 text-right">
+                  @if (row.overdue > 0) {
+                    <span class="font-medium text-rose-700">{{ formatPrice(row.overdue) }}</span>
+                  } @else {
+                    <span class="text-slate-400">0 ₫</span>
+                  }
+                </td>
+                <td class="px-3 py-2 text-right">
+                  <a
+                    class="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                    routerLink="/payments/ledger"
+                  >
+                    Công nợ
+                  </a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+
+    <!-- Công nợ phải trả nhà cung cấp -->
+    <div class="sh-card overflow-x-auto">
+      <h2 class="px-3 py-2 text-sm font-semibold text-slate-700">
+        Phải trả nhà cung cấp ({{ data.suppliers.length }})
+      </h2>
+
+      @if (data.suppliers.length === 0) {
+        <app-empty-state icon="✅" title="Không còn công nợ nhà cung cấp." />
+      } @else {
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <tr>
+              <th class="px-3 py-2">Nhà cung cấp</th>
+              <th class="px-3 py-2 text-right">Dư nợ</th>
+              <th class="px-3 py-2 text-right">Quá hạn</th>
+              <th class="px-3 py-2 text-right">Sao kê</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (row of data.suppliers; track row.supplierId) {
+              <tr>
+                <td class="px-3 py-2 text-slate-800">
+                  {{ row.supplierName }}
+                  <span class="block text-xs text-slate-500">#{{ row.supplierId }}</span>
+                </td>
+                <td class="px-3 py-2 text-right font-medium text-slate-800">
+                  {{ formatPrice(row.balance) }}
+                </td>
+                <td class="px-3 py-2 text-right">
+                  @if (row.overdue > 0) {
+                    <span class="font-medium text-rose-700">{{ formatPrice(row.overdue) }}</span>
+                  } @else {
+                    <span class="text-slate-400">0 ₫</span>
+                  }
+                </td>
+                <td class="px-3 py-2 text-right">
+                  <a
+                    class="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                    [routerLink]="['/suppliers', row.supplierId]"
+                  >
+                    Chi tiết NCC
+                  </a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  } @else {
+    <div class="sh-card">
+      <app-empty-state
+        icon="⚖️"
+        title="Chưa có dữ liệu công nợ"
+        description="Bấm “Tải lại” để nạp lại số liệu."
+      />
+    </div>
+  }
+</section>

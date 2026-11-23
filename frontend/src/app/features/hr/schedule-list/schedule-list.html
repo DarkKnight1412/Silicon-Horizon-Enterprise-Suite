@@ -1,0 +1,259 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Xếp ca làm việc</h1>
+      <p class="text-sm text-slate-500">
+        Bảng xếp ca theo khoảng ngày (bao gồm cả hai đầu) · chi nhánh lấy từ tài khoản đăng nhập.
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <a
+        routerLink="/hr/attendance"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        Bảng công
+      </a>
+      @if (canManage()) {
+        <button
+          type="button"
+          class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+          (click)="openAssign()"
+        >
+          + Xếp ca
+        </button>
+      }
+    </div>
+  </header>
+
+  <form
+    class="sh-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4"
+    [formGroup]="filters"
+    (ngSubmit)="load()"
+    novalidate
+  >
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="fromDate">Từ ngày</label>
+      <input
+        id="fromDate"
+        type="date"
+        formControlName="fromDate"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="toDate">Đến ngày</label>
+      <input
+        id="toDate"
+        type="date"
+        formControlName="toDate"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    @if (isAdmin()) {
+      <div>
+        <label class="block text-sm font-medium text-slate-700" for="employeeFilter">
+          Nhân viên (chỉ Admin lọc được)
+        </label>
+        <select
+          id="employeeFilter"
+          formControlName="employeeId"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        >
+          <option [ngValue]="null">Tất cả nhân viên</option>
+          @for (employee of employees(); track employee.id) {
+            <option [ngValue]="employee.id">{{ employeeLabel(employee) }}</option>
+          }
+        </select>
+      </div>
+    }
+
+    @if (filters.errors?.['dateRange']; as rangeError) {
+      <p class="sh-field-error lg:col-span-2">{{ rangeError.message }}</p>
+    }
+
+    <div class="flex items-end gap-2">
+      <button
+        type="submit"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+      >
+        Lọc
+      </button>
+      <button
+        type="button"
+        class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+        (click)="resetFilters()"
+      >
+        Tháng này
+      </button>
+    </div>
+  </form>
+
+  @if (loading()) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tải bảng xếp ca…</div>
+  } @else if (schedules().length === 0) {
+    <div class="sh-card">
+      <app-empty-state
+        icon="🗓️"
+        title="Chưa có ca nào trong khoảng đã chọn"
+        description="Quản lý chi nhánh có thể xếp ca cho nhân viên bằng nút “Xếp ca”."
+      />
+    </div>
+  } @else {
+    <div class="sh-card overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-3 py-2">Ngày làm</th>
+            <th class="px-3 py-2">Nhân viên</th>
+            <th class="px-3 py-2">Ca</th>
+            <th class="px-3 py-2">Khung giờ</th>
+            <th class="px-3 py-2">Chi nhánh</th>
+            @if (canManage()) {
+              <th class="px-3 py-2 text-right">Thao tác</th>
+            }
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (item of schedules(); track item.scheduleId) {
+            <tr>
+              <td class="px-3 py-2 font-medium text-slate-800">{{ item.workDate }}</td>
+              <td class="px-3 py-2 text-slate-700">
+                {{ item.employeeName }}
+                <span class="block text-xs text-slate-500">#{{ item.employeeId }}</span>
+              </td>
+              <td class="px-3 py-2">
+                <span class="rounded-full bg-sky-100 px-2 py-1 text-xs font-medium text-sky-800">
+                  {{ item.shiftName }}
+                </span>
+                <span class="ml-1 font-mono text-xs text-slate-500">{{ item.shiftCode }}</span>
+              </td>
+              <td class="px-3 py-2 text-slate-600">
+                {{ formatShiftTime(item.startTime) }} – {{ formatShiftTime(item.endTime) }}
+              </td>
+              <td class="px-3 py-2 text-slate-600">#{{ item.branchId }}</td>
+              @if (canManage()) {
+                <td class="px-3 py-2 text-right">
+                  <button
+                    type="button"
+                    class="rounded-md border border-slate-300 px-2 py-1 text-xs text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                    [disabled]="busy()"
+                    (click)="removeSchedule(item)"
+                  >
+                    Xoá ca
+                  </button>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Hộp thoại xếp ca (QL/AD) -->
+  @if (assignOpen()) {
+    <div class="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4">
+      <div class="sh-card w-full max-w-md p-5">
+        <h2 class="sh-page-title">Xếp ca cho nhân viên</h2>
+        <p class="mt-1 text-xs text-slate-500">
+          Ca được tạo trong chi nhánh của bạn; nhân viên phải thuộc chi nhánh đó.
+        </p>
+
+        <form class="mt-3 space-y-3" [formGroup]="assignForm" (ngSubmit)="submitAssign()" novalidate>
+          <div>
+            <label class="block text-sm font-medium text-slate-700" for="assignEmployee">
+              Nhân viên <span class="text-rose-600">*</span>
+            </label>
+            @if (isAdmin()) {
+              <select
+                id="assignEmployee"
+                formControlName="employeeId"
+                class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              >
+                <option [ngValue]="null">— Chọn nhân viên —</option>
+                @for (employee of employees(); track employee.id) {
+                  <option [ngValue]="employee.id">{{ employeeLabel(employee) }}</option>
+                }
+              </select>
+            } @else {
+              <input
+                id="assignEmployee"
+                type="number"
+                min="1"
+                formControlName="employeeId"
+                class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+              <p class="mt-1 text-xs text-slate-500">
+                Nhập mã nhân viên trong chi nhánh (danh sách nhân viên chỉ Admin xem được).
+              </p>
+            }
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700" for="assignShift">
+              Ca làm việc <span class="text-rose-600">*</span>
+            </label>
+            @if (isAdmin()) {
+              <select
+                id="assignShift"
+                formControlName="shiftId"
+                class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              >
+                <option [ngValue]="null">— Chọn ca —</option>
+                @for (shift of shifts(); track shift.id) {
+                  <option [ngValue]="shift.id">{{ shiftLabel(shift) }}</option>
+                }
+              </select>
+            } @else {
+              <input
+                id="assignShift"
+                type="number"
+                min="1"
+                formControlName="shiftId"
+                class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+              <p class="mt-1 text-xs text-slate-500">
+                Nhập Id ca làm việc (danh mục ca chỉ Admin xem được).
+              </p>
+            }
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700" for="assignWorkDate">
+              Ngày làm việc <span class="text-rose-600">*</span>
+            </label>
+            <input
+              id="assignWorkDate"
+              type="date"
+              formControlName="workDate"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+          </div>
+
+          @if (assignForm.invalid && assignForm.touched) {
+            <p class="sh-field-error">Vui lòng nhập đủ nhân viên, ca và ngày làm việc.</p>
+          }
+
+          <div class="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+              (click)="closeAssign()"
+            >
+              Đóng
+            </button>
+            <button
+              type="submit"
+              class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+              [disabled]="busy()"
+            >
+              Xếp ca
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</section>

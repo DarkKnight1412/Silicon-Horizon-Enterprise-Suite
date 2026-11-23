@@ -1,0 +1,187 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Tồn kho</h1>
+      <p class="text-sm text-slate-500">
+        {{ result().totalCount }} dòng · Khả dụng = Thực tế − Đang giữ. Chi nhánh lấy từ tài khoản đăng nhập.
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <a
+        routerLink="/inventory/movements"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        Thẻ kho
+      </a>
+      <a
+        routerLink="/inventory/receipts"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        Phiếu nhập kho
+      </a>
+    </div>
+  </header>
+
+  <form
+    class="sh-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4"
+    [formGroup]="filters"
+    (ngSubmit)="load(1, result().pageSize)"
+    novalidate
+  >
+    <div class="lg:col-span-2">
+      <label class="block text-sm font-medium text-slate-700" for="keyword">
+        Từ khoá (tên sản phẩm hoặc đầu mã SKU)
+      </label>
+      <input
+        id="keyword"
+        type="search"
+        formControlName="keyword"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    <label class="flex items-center gap-2 self-end pb-2 text-sm text-slate-700">
+      <input type="checkbox" formControlName="belowMinOnly" class="h-4 w-4" />
+      Chỉ hiện hàng dưới mức tối thiểu
+    </label>
+
+    <div class="flex items-end gap-2">
+      <button
+        type="submit"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+      >
+        Lọc
+      </button>
+      <button
+        type="button"
+        class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+        (click)="resetFilters()"
+      >
+        Xoá lọc
+      </button>
+    </div>
+  </form>
+
+  @if (loading()) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tải tồn kho…</div>
+  } @else if (result().items.length === 0) {
+    <div class="sh-card">
+      <app-empty-state
+        icon="📦"
+        title="Không có dòng tồn kho nào"
+        description="Thử bỏ lọc, hoặc kiểm tra lại chi nhánh gắn với tài khoản đang đăng nhập."
+      />
+    </div>
+  } @else {
+    <div class="sh-card overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-3 py-2">Sản phẩm</th>
+            <th class="px-3 py-2">Chi nhánh</th>
+            <th class="px-3 py-2 text-right">Thực tế</th>
+            <th class="px-3 py-2 text-right">Đang giữ</th>
+            <th class="px-3 py-2 text-right">Khả dụng</th>
+            <th class="px-3 py-2 text-right">Tối thiểu</th>
+            @if (canSetMinStock()) {
+              <th class="px-3 py-2 text-right">Thao tác</th>
+            }
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (row of result().items; track row.branchId + '-' + row.productId) {
+            <tr [class.bg-amber-50]="row.isBelowMin">
+              <td class="px-3 py-2">
+                <p class="font-medium text-slate-800">{{ row.productName }}</p>
+                <p class="font-mono text-xs text-slate-500">{{ row.sku }}</p>
+              </td>
+              <td class="px-3 py-2 text-slate-600">{{ row.branchName }}</td>
+              <td class="px-3 py-2 text-right text-slate-700">
+                {{ formatQuantity(row.physicalQty) }}
+              </td>
+              <td class="px-3 py-2 text-right text-slate-700">
+                {{ formatQuantity(row.reservedQty) }}
+              </td>
+              <td class="px-3 py-2 text-right font-medium text-slate-900">
+                {{ formatQuantity(row.availableQty) }}
+              </td>
+              <td class="px-3 py-2 text-right text-slate-700">
+                @if (row.minStock === null) {
+                  <span class="text-xs text-slate-400">mặc định SP</span>
+                } @else {
+                  {{ formatQuantity(row.minStock) }}
+                }
+                @if (row.isBelowMin) {
+                  <span class="ml-1 rounded-full bg-amber-200 px-2 py-0.5 text-xs text-amber-900">
+                    dưới mức
+                  </span>
+                }
+              </td>
+              @if (canSetMinStock()) {
+                <td class="px-3 py-2 text-right">
+                  <button
+                    type="button"
+                    class="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                    (click)="openMinStock(row)"
+                  >
+                    Đặt mức tối thiểu
+                  </button>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+
+      </table>
+    </div>
+    <div class="sh-card">
+      <app-pagination
+        [pageNumber]="result().pageNumber"
+        [pageSize]="result().pageSize"
+        [totalCount]="result().totalCount"
+        [totalPages]="result().totalPages"
+        (pageChange)="load($event, result().pageSize)"
+        (pageSizeChange)="load(1, $event)"
+      />
+    </div>
+  }
+
+  @if (minTarget(); as target) {
+    <div class="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4">
+      <div class="sh-card w-full max-w-md p-5">
+        <h2 class="sh-page-title">Mức tồn tối thiểu</h2>
+        <p class="mt-1 text-sm text-slate-600">{{ target.productName }} — {{ target.branchName }}</p>
+
+        <label class="mt-4 block text-sm font-medium text-slate-700" for="minStock">
+          Mức tối thiểu (bỏ trống = dùng mặc định của sản phẩm)
+        </label>
+        <input
+          id="minStock"
+          type="number"
+          min="0"
+          step="1"
+          [formControl]="minStock"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        />
+
+        <div class="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+            (click)="closeMinStock()"
+          >
+            Đóng
+          </button>
+          <button
+            type="button"
+            class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+            [disabled]="saving()"
+            (click)="saveMinStock()"
+          >
+            {{ saving() ? 'Đang lưu…' : 'Lưu mức tối thiểu' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</section>

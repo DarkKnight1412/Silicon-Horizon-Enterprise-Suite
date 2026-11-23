@@ -1,0 +1,67 @@
+/* =============================================================================
+   Global styles (SCSS) — chạy SAU Tailwind (xem angular.json thứ tự styles).
+   Ở đây chỉ khai báo biến toàn cục + vài class nền tảng; style chi tiết viết trong
+   từng component (SCSS) hoặc bằng class Tailwind ngay trong template.
+   KHÔNG dùng @apply ở đây để tránh phụ thuộc thứ tự xử lý của Tailwind.
+   ============================================================================= */
+
+:root {
+  --sh-header-height: 3.5rem;
+  --sh-sidebar-width: 15.5rem;
+  --sh-radius: 0.75rem;
+  --sh-shadow-card: 0 1px 2px rgb(15 23 42 / 6%), 0 8px 24px -12px rgb(15 23 42 / 12%);
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font-family: var(--font-sans);
+  color: #0f172a;
+  background-color: #f1f5f9;
+}
+
+/* Thanh cuộn gọn cho các bảng danh sách dài */
+* {
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 1px;
+}
+
+/* Class dùng chung cho app */
+.sh-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--sh-radius);
+  box-shadow: var(--sh-shadow-card);
+}
+
+.sh-page-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.sh-field-error {
+  color: var(--color-danger);
+  font-size: 0.8125rem;
+  margin-top: 0.25rem;
+}
+
+.sh-input-invalid {
+  border-color: var(--color-danger) !important;
+}
+

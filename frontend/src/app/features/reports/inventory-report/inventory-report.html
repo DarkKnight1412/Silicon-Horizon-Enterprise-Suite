@@ -1,0 +1,191 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Báo cáo tồn kho</h1>
+      <p class="text-sm text-slate-500">
+        Giá trị tồn theo chi nhánh/danh mục và hàng tồn lâu không xuất · số liệu hiện thời.
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2 text-sm">
+      <a routerLink="/reports/revenue" class="rounded-md border border-slate-300 px-3 py-1.5 text-slate-700 hover:bg-slate-50">
+        Doanh thu
+      </a>
+      <a routerLink="/reports/serial-status" class="rounded-md border border-slate-300 px-3 py-1.5 text-slate-700 hover:bg-slate-50">
+        Serial
+      </a>
+    </div>
+  </header>
+
+  <form class="sh-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4" [formGroup]="filters" (ngSubmit)="load()" novalidate>
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="slowDays">
+        Số ngày coi là tồn lâu <span class="text-rose-600">*</span>
+      </label>
+      <input
+        id="slowDays"
+        type="number"
+        min="1"
+        max="3650"
+        formControlName="slowDays"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+      @if (filters.controls.slowDays.touched && filters.controls.slowDays.invalid) {
+        <p class="sh-field-error">Nhập số ngày trong khoảng 1–3650.</p>
+      }
+    </div>
+
+    @if (isAdmin()) {
+      <app-report-branch-select
+        [control]="branchId"
+        [branches]="branches()"
+        controlId="inventoryBranchId"
+      />
+    }
+
+    <div class="flex items-end gap-2">
+      <button
+        type="submit"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+      >
+        Xem báo cáo
+      </button>
+      <button
+        type="button"
+        class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+        (click)="resetFilters()"
+      >
+        Mặc định
+      </button>
+    </div>
+  </form>
+
+  @if (loading()) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tổng hợp tồn kho…</div>
+  } @else if (report(); as data) {
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="sh-card p-4">
+        <p class="text-xs uppercase text-slate-500">Tồn thực tế</p>
+        <p class="mt-1 text-lg font-semibold text-slate-800">{{ formatCount(totals().physicalQty) }}</p>
+      </div>
+      <div class="sh-card p-4">
+        <p class="text-xs uppercase text-slate-500">Đang giữ cho đơn</p>
+        <p class="mt-1 text-lg font-semibold text-slate-800">{{ formatCount(totals().reservedQty) }}</p>
+      </div>
+      <div class="sh-card p-4">
+        <p class="text-xs uppercase text-slate-500">Khả dụng</p>
+        <p class="mt-1 text-lg font-semibold text-emerald-700">
+          {{ formatCount(totals().availableQty) }}
+        </p>
+      </div>
+      <div class="sh-card p-4">
+        <p class="text-xs uppercase text-slate-500">Tổng giá trị tồn</p>
+        <p class="mt-1 text-lg font-semibold text-slate-800">{{ formatPrice(totals().stockValue) }}</p>
+      </div>
+    </div>
+
+    <p class="text-xs text-slate-500">
+      Ngưỡng tồn lâu: {{ data.slowDays }} ngày · phạm vi:
+      {{ data.branchId === null ? 'toàn hệ thống' : 'chi nhánh #' + data.branchId }}
+    </p>
+
+    <div class="sh-card overflow-x-auto">
+      <h2 class="px-3 py-2 text-sm font-semibold text-slate-700">
+        Giá trị tồn theo chi nhánh &amp; danh mục ({{ data.values.length }} dòng)
+      </h2>
+
+      @if (data.values.length === 0) {
+        <app-empty-state
+          icon="📦"
+          title="Không có dữ liệu tồn kho"
+          description="Chưa có hàng trong kho hoặc bộ lọc chi nhánh không khớp."
+        />
+      } @else {
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <tr>
+              <th class="px-3 py-2">Chi nhánh</th>
+              <th class="px-3 py-2">Danh mục</th>
+              <th class="px-3 py-2 text-right">Tồn thực tế</th>
+              <th class="px-3 py-2 text-right">Đang giữ</th>
+              <th class="px-3 py-2 text-right">Khả dụng</th>
+              <th class="px-3 py-2 text-right">Giá trị tồn</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (row of data.values; track row.branchId + '-' + row.categoryId) {
+              <tr>
+                <td class="px-3 py-2 text-slate-700">
+                  {{ row.branchName }}
+                  <span class="block text-xs text-slate-500">#{{ row.branchId }}</span>
+                </td>
+                <td class="px-3 py-2 text-slate-700">{{ row.categoryName }}</td>
+                <td class="px-3 py-2 text-right text-slate-700">
+                  {{ formatCount(row.physicalQty) }}
+                </td>
+                <td class="px-3 py-2 text-right text-slate-700">
+                  {{ formatCount(row.reservedQty) }}
+                </td>
+                <td class="px-3 py-2 text-right font-medium text-emerald-700">
+                  {{ formatCount(row.availableQty) }}
+                </td>
+                <td class="px-3 py-2 text-right font-medium text-slate-800">
+                  {{ formatPrice(row.stockValue) }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+
+    <div class="sh-card overflow-x-auto">
+      <h2 class="px-3 py-2 text-sm font-semibold text-slate-700">
+        Hàng tồn lâu không xuất &gt; {{ data.slowDays }} ngày ({{ data.slowMoving.length }} dòng)
+      </h2>
+
+      @if (data.slowMoving.length === 0) {
+        <app-empty-state
+          icon="🐌"
+          title="Không có hàng tồn lâu"
+          description="Mọi sản phẩm còn tồn đều đã được xuất kho trong khoảng thời gian đã đặt."
+        />
+      } @else {
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <tr>
+              <th class="px-3 py-2">Chi nhánh</th>
+              <th class="px-3 py-2">Sản phẩm</th>
+              <th class="px-3 py-2 text-right">Tồn thực tế</th>
+              <th class="px-3 py-2">Lần xuất gần nhất</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (row of data.slowMoving; track row.branchId + '-' + row.productId) {
+              <tr>
+                <td class="px-3 py-2 text-slate-600">#{{ row.branchId }}</td>
+                <td class="px-3 py-2 text-slate-800">
+                  {{ row.productName }}
+                  <span class="block font-mono text-xs text-slate-500">{{ row.sku }}</span>
+                </td>
+                <td class="px-3 py-2 text-right text-slate-700">
+                  {{ formatCount(row.physicalQty) }}
+                </td>
+                <td class="px-3 py-2 text-slate-600">
+                  {{ row.lastIssueAt === null ? 'Chưa từng xuất' : formatMoment(row.lastIssueAt) }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  } @else {
+    <div class="sh-card">
+      <app-empty-state
+        icon="📉"
+        title="Chưa có dữ liệu báo cáo"
+        description="Bấm “Xem báo cáo” để nạp số liệu tồn kho."
+      />
+    </div>
+  }
+</section>

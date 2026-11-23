@@ -1,0 +1,138 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Trả hàng nhà cung cấp</h1>
+      <p class="text-sm text-slate-500">
+        @if (supplier(); as data) {
+          Nhà cung cấp: <span class="font-medium text-slate-700">{{ data.name }}</span>
+          <span class="font-mono text-xs">({{ data.code }})</span>
+        } @else {
+          Không đọc được thông tin nhà cung cấp — kiểm tra lại đường dẫn.
+        }
+      </p>
+    </div>
+    <a
+      [routerLink]="['/suppliers', id()]"
+      class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+    >
+      ← Chi tiết nhà cung cấp
+    </a>
+  </header>
+
+  <p class="sh-card px-4 py-3 text-sm text-amber-900">
+    Chỉ trả được hàng đang ở trạng thái <span class="font-medium">Hàng lỗi</span> tại chi nhánh của bạn.
+    Hàng không quản lý serial sẽ bị trừ thẳng vào tồn thực tế.
+  </p>
+
+  <div class="sh-card space-y-3 p-4">
+    <h2 class="text-sm font-semibold text-slate-700">Thêm dòng hàng trả</h2>
+    <app-product-picker
+      [keyword]="productKeyword"
+      [results]="productResults()"
+      [searching]="searching()"
+      [searched]="searched()"
+      (search)="searchProducts()"
+      (picked)="addLine($event)"
+    />
+  </div>
+
+  <div class="sh-card overflow-x-auto">
+    @if (lines.length === 0) {
+      <p class="p-6 text-center text-sm text-slate-500">
+        Chưa có dòng hàng nào — tìm và chọn sản phẩm ở khối phía trên.
+      </p>
+    } @else {
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-3 py-2">Sản phẩm</th>
+            <th class="w-24 px-3 py-2">Số lượng</th>
+            <th class="px-3 py-2"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (line of lines.controls; track line; let index = $index) {
+            <tr [formGroup]="line">
+              <td class="px-3 py-2 align-top">
+                <p class="font-medium text-slate-800">{{ line.controls.name.value }}</p>
+                <p class="font-mono text-xs text-slate-500">{{ line.controls.sku.value }}</p>
+
+                @if (line.controls.requiresSerial.value) {
+                  <label class="mt-2 block text-xs font-medium text-amber-800" [attr.for]="'rserial-' + index">
+                    Serial Hàng lỗi tại chi nhánh — cần đúng {{ line.controls.quantity.value ?? 0 }} số
+                  </label>
+                  <textarea
+                    [id]="'rserial-' + index"
+                    rows="3"
+                    formControlName="serialsText"
+                    class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 font-mono text-xs"
+                  ></textarea>
+                  <p class="mt-1 text-xs text-slate-500">
+                    Đã nhập {{ serialCount(line) }} serial.
+                    @if (serialMismatch(line)) {
+                      <span class="text-rose-600">Số serial chưa khớp số lượng.</span>
+                    }
+                  </p>
+                }
+              </td>
+              <td class="px-3 py-2 align-top">
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  formControlName="quantity"
+                  class="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                  [class.sh-input-invalid]="line.controls.quantity.touched && line.controls.quantity.invalid"
+                />
+                @if (line.controls.quantity.touched && line.controls.quantity.invalid) {
+                  <p class="sh-field-error">Số lượng từ 1 trở lên.</p>
+                }
+              </td>
+              <td class="px-3 py-2 text-right align-top">
+                <button
+                  type="button"
+                  class="rounded-md px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50"
+                  (click)="removeLine(index)"
+                >
+                  Xoá dòng
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+
+  <form class="sh-card space-y-3 p-4" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <h2 class="text-sm font-semibold text-slate-700">Giảm trừ công nợ</h2>
+    <div class="sm:max-w-sm">
+      <label class="block text-sm font-medium text-slate-700" for="creditAmount">
+        Số tiền ghi giảm công nợ (VND)
+      </label>
+      <input
+        id="creditAmount"
+        type="number"
+        min="0"
+        step="1"
+        formControlName="creditAmount"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        [class.sh-input-invalid]="form.controls.creditAmount.touched && form.controls.creditAmount.invalid"
+      />
+      @if (form.controls.creditAmount.touched && form.controls.creditAmount.invalid) {
+        <p class="sh-field-error">Số tiền không âm.</p>
+      }
+      <p class="mt-1 text-xs text-slate-500">
+        Để 0 nếu nhà cung cấp đổi hàng thay vì ghi giảm công nợ.
+      </p>
+    </div>
+
+    <button
+      type="submit"
+      class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+      [disabled]="submitting()"
+    >
+      {{ submitting() ? 'Đang gửi…' : 'Xác nhận trả hàng' }}
+    </button>
+  </form>
+</section>

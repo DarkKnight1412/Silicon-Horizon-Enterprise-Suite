@@ -1,0 +1,294 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Nhà cung cấp</h1>
+      <p class="text-sm text-slate-500">{{ result().totalCount }} nhà cung cấp</p>
+    </div>
+    <div class="flex gap-2">
+      <a
+        routerLink="/inventory/receipts"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        Phiếu nhập kho
+      </a>
+      <a
+        routerLink="/inventory/stock"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        Tồn kho
+      </a>
+    </div>
+  </header>
+
+  <form
+    class="sh-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4"
+    [formGroup]="filters"
+    (ngSubmit)="load(1, result().pageSize)"
+    novalidate
+  >
+    <div class="lg:col-span-2">
+      <label class="block text-sm font-medium text-slate-700" for="keyword">Tìm theo mã hoặc tên</label>
+      <input
+        id="keyword"
+        type="search"
+        formControlName="keyword"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="isActive">Trạng thái hợp tác</label>
+      <select
+        id="isActive"
+        formControlName="isActive"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      >
+        <option [ngValue]="null">Tất cả</option>
+        <option [ngValue]="true">Đang hợp tác</option>
+        <option [ngValue]="false">Ngừng hợp tác</option>
+      </select>
+    </div>
+
+    <div class="flex items-end gap-2">
+      <button
+        type="submit"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+      >
+        Lọc
+      </button>
+      <button
+        type="button"
+        class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+        (click)="resetFilters()"
+      >
+        Xoá lọc
+      </button>
+    </div>
+  </form>
+
+  @if (!isAdmin()) {
+    <p class="sh-card px-4 py-3 text-sm text-slate-500">
+      Chỉ Admin tạo/sửa được nhà cung cấp — bạn đang xem ở chế độ chỉ đọc.
+    </p>
+  }
+
+  @if (isAdmin()) {
+    <form class="sh-card space-y-3 p-4" [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-sm font-semibold text-slate-700">
+          @if (editingId() === null) {
+            Thêm nhà cung cấp mới
+          } @else {
+            Sửa nhà cung cấp #{{ editingId() }} (không đổi được mã)
+          }
+        </h2>
+        @if (editingId() !== null) {
+          <button
+            type="button"
+            class="rounded-md border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-50"
+            (click)="cancelEdit()"
+          >
+            Huỷ sửa
+          </button>
+        }
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div>
+          <label class="block text-sm font-medium text-slate-700" for="code">
+            Mã NCC <span class="text-rose-600">*</span>
+          </label>
+          <input
+            id="code"
+            type="text"
+            formControlName="code"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-sm uppercase"
+            [class.sh-input-invalid]="form.controls.code.touched && form.controls.code.invalid"
+            [readOnly]="editingId() !== null"
+          />
+          @if (form.controls.code.touched && form.controls.code.invalid) {
+            <p class="sh-field-error">Mã gồm chữ HOA, số, gạch ngang/gạch dưới (2–30 ký tự).</p>
+          }
+        </div>
+
+        <div class="lg:col-span-2">
+          <label class="block text-sm font-medium text-slate-700" for="name">
+            Tên nhà cung cấp <span class="text-rose-600">*</span>
+          </label>
+          <input
+            id="name"
+            type="text"
+            formControlName="name"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            [class.sh-input-invalid]="form.controls.name.touched && form.controls.name.invalid"
+          />
+          @if (form.controls.name.touched && form.controls.name.invalid) {
+            <p class="sh-field-error">Tên nhà cung cấp bắt buộc, tối đa 200 ký tự.</p>
+          }
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700" for="taxCode">Mã số thuế</label>
+          <input
+            id="taxCode"
+            type="text"
+            formControlName="taxCode"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700" for="phone">Điện thoại</label>
+          <input
+            id="phone"
+            type="text"
+            formControlName="phone"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700" for="paymentTermDays">
+            Số ngày được nợ <span class="text-rose-600">*</span>
+          </label>
+          <input
+            id="paymentTermDays"
+            type="number"
+            min="0"
+            max="365"
+            step="1"
+            formControlName="paymentTermDays"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            [class.sh-input-invalid]="
+              form.controls.paymentTermDays.touched && form.controls.paymentTermDays.invalid
+            "
+          />
+          @if (form.controls.paymentTermDays.touched && form.controls.paymentTermDays.invalid) {
+            <p class="sh-field-error">Từ 0 đến 365 ngày (dùng tính hạn trả khi nhập kho).</p>
+          }
+        </div>
+
+        <div class="lg:col-span-2">
+          <label class="block text-sm font-medium text-slate-700" for="address">Địa chỉ</label>
+          <input
+            id="address"
+            type="text"
+            formControlName="address"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        @if (editingId() !== null) {
+          <label class="flex items-center gap-2 self-end pb-2 text-sm text-slate-700">
+            <input type="checkbox" formControlName="isActive" class="h-4 w-4" />
+            Đang hợp tác
+          </label>
+        }
+      </div>
+
+      <button
+        type="submit"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+        [disabled]="submitting()"
+      >
+        {{ editingId() === null ? 'Thêm nhà cung cấp' : 'Lưu thay đổi' }}
+      </button>
+    </form>
+  }
+
+
+  @if (loading()) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tải nhà cung cấp…</div>
+  } @else if (result().items.length === 0) {
+    <div class="sh-card">
+      <app-empty-state
+        icon="🚚"
+        title="Chưa có nhà cung cấp nào"
+        description="Thêm nhà cung cấp để lập được phiếu nhập kho và theo dõi công nợ phải trả."
+      />
+    </div>
+  } @else {
+    <div class="sh-card overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-3 py-2">Mã / Tên</th>
+            <th class="px-3 py-2">Liên hệ</th>
+            <th class="px-3 py-2 text-right">Hạn trả</th>
+            <th class="px-3 py-2">Trạng thái</th>
+            <th class="px-3 py-2 text-right">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (supplier of result().items; track supplier.id) {
+            <tr>
+              <td class="px-3 py-2">
+                <p class="font-medium text-slate-800">{{ supplier.name }}</p>
+                <p class="font-mono text-xs text-slate-500">{{ supplier.code }}</p>
+              </td>
+              <td class="px-3 py-2 text-slate-600">
+                <p>{{ supplier.phone ?? '—' }}</p>
+                <p class="text-xs text-slate-500">{{ supplier.address ?? '—' }}</p>
+              </td>
+              <td class="px-3 py-2 text-right text-slate-700">{{ supplier.paymentTermDays }} ngày</td>
+              <td class="px-3 py-2">
+                <span
+                  class="rounded-full px-2 py-1 text-xs font-medium"
+                  [class]="supplier.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'"
+                >
+                  {{ activeLabel(supplier.isActive) }}
+                </span>
+                <p class="mt-1 text-xs text-slate-400">{{ formatMoment(supplier.updatedAt ?? supplier.createdAt) }}</p>
+              </td>
+              <td class="px-3 py-2 text-right">
+                <div class="flex flex-wrap justify-end gap-2">
+                  <a
+                    class="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                    [routerLink]="['/suppliers', supplier.id]"
+                  >
+                    Công nợ
+                  </a>
+                  <a
+                    class="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                    [routerLink]="['/suppliers', supplier.id, 'return']"
+                  >
+                    Trả hàng
+                  </a>
+                  @if (isAdmin()) {
+                    <button
+                      type="button"
+                      class="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                      (click)="startEdit(supplier)"
+                    >
+                      Sửa
+                    </button>
+                    <button
+                      type="button"
+                      class="rounded-md px-2 py-1 text-xs font-medium"
+                      [class]="supplier.isActive ? 'text-rose-600 hover:bg-rose-50' : 'text-emerald-700 hover:bg-emerald-50'"
+                      (click)="toggleActive(supplier)"
+                    >
+                      {{ supplier.isActive ? 'Ngừng hợp tác' : 'Cho hợp tác lại' }}
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sh-card">
+      <app-pagination
+        [pageNumber]="result().pageNumber"
+        [pageSize]="result().pageSize"
+        [totalCount]="result().totalCount"
+        [totalPages]="result().totalPages"
+        (pageChange)="load($event, result().pageSize)"
+        (pageSizeChange)="load(1, $event)"
+      />
+    </div>
+  }
+
+</section>

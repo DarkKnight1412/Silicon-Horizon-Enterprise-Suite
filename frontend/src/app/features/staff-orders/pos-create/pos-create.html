@@ -1,0 +1,408 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Bán tại quầy (POS)</h1>
+      <p class="text-sm text-slate-500">
+        Tạo đơn tại quầy — chi nhánh và nhân viên tạo đơn lấy từ tài khoản đăng nhập (ORD-03).
+      </p>
+    </div>
+    <a
+      routerLink="/staff-orders"
+      class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+    >
+      ← Đơn của chi nhánh
+    </a>
+  </header>
+
+  <form class="space-y-4" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <!-- Khách hàng được phục vụ -->
+    <div class="sh-card p-4">
+      <h2 class="text-sm font-semibold text-slate-700">Khách hàng</h2>
+
+      @if (isAdmin()) {
+        <div class="mt-2 flex flex-wrap items-end gap-2">
+          <div class="min-w-56 flex-1">
+            <label class="block text-sm font-medium text-slate-700" for="customerKeyword">
+              Tra cứu khách (tên / SĐT / email)
+            </label>
+            <input
+              id="customerKeyword"
+              type="search"
+              [formControl]="customerKeyword"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              (keyup.enter)="searchCustomers()"
+            />
+          </div>
+          <button
+            type="button"
+            class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            [disabled]="searchingCustomers()"
+            (click)="searchCustomers()"
+          >
+            {{ searchingCustomers() ? 'Đang tìm…' : 'Tìm khách' }}
+          </button>
+        </div>
+
+        @if (customerResults().length > 0) {
+          <ul
+            class="mt-3 max-h-56 divide-y divide-slate-100 overflow-y-auto rounded-md border border-slate-200"
+          >
+            @for (customer of customerResults(); track customer.id) {
+              <li class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                <div class="min-w-0">
+                  <p class="truncate font-medium text-slate-800">
+                    {{ customer.fullName }} · {{ customer.phone }}
+                  </p>
+                  <p class="text-xs text-slate-500">
+                    #{{ customer.id }} · {{ customerKindLabel(customer) }} · hạn mức công nợ
+                    {{ formatPrice(customer.creditLimit) }}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="shrink-0 rounded-md bg-brand-600 px-3 py-1 text-xs font-medium text-white hover:bg-brand-700"
+                  (click)="pickCustomer(customer)"
+                >
+                  Chọn
+                </button>
+              </li>
+            }
+          </ul>
+        }
+
+        @if (selectedCustomer(); as customer) {
+          <div
+            class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md bg-slate-50 px-3 py-2 text-sm"
+          >
+            <span class="text-slate-700">
+              Đã chọn: <strong>{{ customer.fullName }}</strong> · {{ customer.phone }}
+              <span class="text-xs text-slate-500">(#{{ customer.id }})</span>
+            </span>
+            <button
+              type="button"
+              class="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-white"
+              (click)="clearCustomer()"
+            >
+              Bỏ chọn
+            </button>
+          </div>
+        } @else {
+          <p class="mt-3 text-sm text-amber-700">
+            Chưa chọn khách — đơn tại quầy bắt buộc gắn với một hồ sơ khách.
+          </p>
+        }
+      } @else {
+        <div class="mt-2 sm:max-w-xs">
+          <label class="block text-sm font-medium text-slate-700" for="customerId">
+            Mã khách hàng (CustomerId) <span class="text-rose-600">*</span>
+          </label>
+          <input
+            id="customerId"
+            type="number"
+            min="1"
+            formControlName="customerId"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          />
+          <p class="mt-1 text-xs text-slate-500">
+            Vai trò của bạn không gọi được API tra cứu khách (chỉ Admin) — nhập trực tiếp mã khách,
+            kể cả khách vãng lai đã có hồ sơ.
+          </p>
+        </div>
+      }
+    </div>
+
+    <!-- Thông tin đơn -->
+    <div class="sh-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-700" for="fulfillmentType">
+          Hình thức nhận hàng
+        </label>
+        <select
+          id="fulfillmentType"
+          formControlName="fulfillmentType"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        >
+          @for (option of fulfillmentOptions; track option.value) {
+            <option [ngValue]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700" for="paymentMethod">
+          Phương thức thanh toán <span class="text-rose-600">*</span>
+        </label>
+        <select
+          id="paymentMethod"
+          formControlName="paymentMethod"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        >
+          @for (option of paymentMethodOptions; track option.value) {
+            <option [ngValue]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700" for="shippingFee">
+          Phí vận chuyển (VND)
+        </label>
+        <input
+          id="shippingFee"
+          type="number"
+          min="0"
+          formControlName="shippingFee"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700" for="voucherCode">
+          Mã giảm giá (nếu có)
+        </label>
+        <input
+          id="voucherCode"
+          type="text"
+          formControlName="voucherCode"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        />
+      </div>
+
+      <div class="sm:col-span-2">
+        <label class="block text-sm font-medium text-slate-700" for="recipientName">
+          Người nhận (bắt buộc khi giao tận nơi)
+        </label>
+        <input
+          id="recipientName"
+          type="text"
+          formControlName="recipientName"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700" for="recipientPhone">
+          SĐT người nhận
+        </label>
+        <input
+          id="recipientPhone"
+          type="tel"
+          formControlName="recipientPhone"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700" for="note">Ghi chú</label>
+        <input
+          id="note"
+          type="text"
+          formControlName="note"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        />
+      </div>
+
+      <div class="sm:col-span-2 lg:col-span-4">
+        <label class="block text-sm font-medium text-slate-700" for="shippingAddress">
+          Địa chỉ giao hàng (bắt buộc khi giao tận nơi)
+        </label>
+        <input
+          id="shippingAddress"
+          type="text"
+          formControlName="shippingAddress"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        />
+      </div>
+    </div>
+
+    <!-- Sản phẩm của đơn -->
+    <div class="sh-card space-y-3 p-4">
+      <h2 class="text-sm font-semibold text-slate-700">Sản phẩm bán tại quầy</h2>
+      <app-product-picker
+        [keyword]="productKeyword"
+        [results]="productResults()"
+        [searching]="searching()"
+        [searched]="searched()"
+        (search)="searchProducts()"
+        (picked)="addLine($event)"
+      />
+    </div>
+
+    <div class="sh-card overflow-x-auto">
+      @if (lines.length === 0) {
+        <p class="p-6 text-center text-sm text-slate-500">
+          Chưa có sản phẩm nào — tìm và chọn sản phẩm ở khối phía trên.
+        </p>
+      } @else {
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <tr>
+              <th class="px-3 py-2">Sản phẩm</th>
+              <th class="w-28 px-3 py-2">Số lượng</th>
+              <th class="w-32 px-3 py-2 text-right">Đơn giá</th>
+              <th class="w-32 px-3 py-2 text-right">Thành tiền</th>
+              <th class="w-20 px-3 py-2"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (line of lines.controls; track line; let index = $index) {
+              <tr [formGroup]="line">
+                <td class="px-3 py-2 align-top">
+                  <p class="font-medium text-slate-800">{{ line.controls.name.value }}</p>
+                  <p class="font-mono text-xs text-slate-500">{{ line.controls.sku.value }}</p>
+                </td>
+                <td class="px-3 py-2 align-top">
+                  <input
+                    type="number"
+                    min="1"
+                    formControlName="quantity"
+                    class="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                  />
+                  @if (line.controls.quantity.touched && line.controls.quantity.invalid) {
+                    <p class="sh-field-error">Số lượng ≥ 1.</p>
+                  }
+                </td>
+                <td class="px-3 py-2 align-top text-right text-slate-700">
+                  {{ formatPrice(line.controls.unitPrice.value) }}
+                </td>
+                <td class="px-3 py-2 align-top text-right font-medium text-slate-800">
+                  {{ formatPrice(lineTotal(line)) }}
+                </td>
+                <td class="px-3 py-2 align-top text-right">
+                  <button
+                    type="button"
+                    class="rounded-md border border-slate-300 px-2 py-1 text-xs text-rose-700 hover:bg-rose-50"
+                    (click)="removeLine(index)"
+                  >
+                    Xoá
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+
+        <div class="flex justify-end border-t border-slate-200 px-3 py-2 text-sm">
+          <span class="text-slate-500">
+            Tạm tính (theo giá hiện hành):&nbsp;
+            <strong class="text-slate-800">{{ formatPrice(estimatedTotal()) }}</strong>
+            &nbsp;+ phí vận chuyển {{ formatPrice(form.controls.shippingFee.value ?? 0) }}
+          </span>
+        </div>
+      }
+    </div>
+
+    <!-- Chia doanh số cho nhân viên (tổng phải bằng 100 nếu có nhập) -->
+    <div class="sh-card space-y-3 p-4">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-sm font-semibold text-slate-700">Chia doanh số / hoa hồng</h2>
+        <div class="flex items-center gap-2 text-xs">
+          <span [class]="shareInvalid() ? 'text-rose-600 font-medium' : 'text-slate-500'">
+            Tổng tỷ lệ: {{ shareTotal() }}% / {{ shareRateTotal }}%
+          </span>
+          <button
+            type="button"
+            class="rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+            (click)="addStaffShare()"
+          >
+            + Thêm nhân viên
+          </button>
+        </div>
+      </div>
+
+      <p class="text-xs text-slate-500">
+        Bỏ trống khối này ⇒ hệ thống tự gán 100% doanh số cho nhân viên tạo đơn (KPI-02). Nếu nhập
+        thì tổng tỷ lệ phải đúng 100%.
+      </p>
+
+      @if (staffShares.length === 0) {
+        <p class="text-sm text-slate-500">Chưa chia doanh số cho nhân viên nào.</p>
+      } @else {
+        <div class="space-y-2">
+          @for (row of staffShares.controls; track row; let index = $index) {
+            <div class="flex flex-wrap items-end gap-2 rounded-md bg-slate-50 p-2" [formGroup]="row">
+              <div class="min-w-56 flex-1">
+                @if (isAdmin()) {
+                  <label class="block text-xs font-medium text-slate-600">Nhân viên</label>
+                  <select
+                    formControlName="employeeId"
+                    class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                  >
+                    <option [ngValue]="null">— Chọn nhân viên —</option>
+                    @for (employee of employees(); track employee.id) {
+                      <option [ngValue]="employee.id">{{ employeeLabel(employee) }}</option>
+                    }
+                  </select>
+                } @else {
+                  <label class="block text-xs font-medium text-slate-600">
+                    Mã nhân viên (EmployeeId)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    formControlName="employeeId"
+                    class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                  />
+                }
+                @if (row.controls.employeeId.touched && row.controls.employeeId.invalid) {
+                  <p class="sh-field-error">Chọn hoặc nhập mã nhân viên hợp lệ.</p>
+                }
+              </div>
+
+              <div class="w-32">
+                <label class="block text-xs font-medium text-slate-600">Tỷ lệ (%)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  formControlName="shareRate"
+                  class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                />
+                @if (row.controls.shareRate.touched && row.controls.shareRate.invalid) {
+                  <p class="sh-field-error">1–100.</p>
+                }
+              </div>
+
+              <button
+                type="button"
+                class="rounded-md border border-slate-300 px-2 py-1 text-xs text-rose-700 hover:bg-rose-50"
+                (click)="removeStaffShare(index)"
+              >
+                Xoá
+              </button>
+            </div>
+          }
+        </div>
+      }
+
+      @if (shareInvalid()) {
+        <p class="sh-field-error">
+          Tổng tỷ lệ chia phải bằng {{ shareRateTotal }}% (đang là {{ shareTotal() }}%).
+        </p>
+      }
+    </div>
+
+    <!-- Nút gửi -->
+    <div class="sh-card flex flex-wrap items-center justify-between gap-3 p-4">
+      <p class="text-sm text-slate-500">
+        Đơn tại quầy luôn dùng chi nhánh của bạn; COD/tiền mặt vào thẳng trạng thái Chờ xác nhận,
+        chuyển khoản/cổng thanh toán vào Chờ thanh toán kèm hạn giữ hàng.
+      </p>
+      <div class="flex gap-2">
+        <a
+          routerLink="/staff-orders"
+          class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+        >
+          Huỷ
+        </a>
+        <button
+          type="submit"
+          class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+          [disabled]="submitting()"
+        >
+          {{ submitting() ? 'Đang tạo đơn…' : 'Tạo đơn tại quầy' }}
+        </button>
+      </div>
+    </div>
+  </form>
+</section>

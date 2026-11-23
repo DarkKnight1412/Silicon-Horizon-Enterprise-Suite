@@ -1,0 +1,77 @@
+<section class="sh-card p-6">
+  <h1 class="sh-page-title text-center text-red-600">Đăng nhập</h1>
+  <p class="mt-1 text-sm text-slate-500">
+    Dùng tài khoản khách hàng hoặc tài khoản nhân viên để tiếp tục.
+  </p>
+
+  @if (apiError(); as error) {
+    <div class="mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+      <p class="font-semibold">{{ error.message }}</p>
+      @if (error.detail) {
+        <p class="mt-0.5 text-xs">Mã lỗi: {{ error.detail }}</p>
+      }
+      @if (error.correlationId) {
+        <p class="mt-0.5 break-all font-mono text-[11px]">correlationId: {{ error.correlationId }}</p>
+      }
+    </div>
+  }
+
+  <form class="mt-5 space-y-4" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="username">
+        Tên đăng nhập hoặc email
+      </label>
+      <input
+        id="username"
+        type="text"
+        autocomplete="username"
+        formControlName="username"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        [class.sh-input-invalid]="form.controls.username.invalid && form.controls.username.touched"
+      />
+      @if (form.controls.username.invalid && form.controls.username.touched) {
+        <p class="sh-field-error">Vui lòng nhập tên đăng nhập.</p>
+      }
+      @if (fieldError('username'); as message) {
+        <p class="sh-field-error">{{ message }}</p>
+      }
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="password">Mật khẩu</label>
+      <input
+        id="password"
+        type="password"
+        autocomplete="current-password"
+        formControlName="password"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        [class.sh-input-invalid]="form.controls.password.invalid && form.controls.password.touched"
+      />
+      @if (form.controls.password.invalid && form.controls.password.touched) {
+        <p class="sh-field-error">
+          @if (form.controls.password.errors?.['required']) {
+            Vui lòng nhập mật khẩu.
+          } @else {
+            Mật khẩu phải có ít nhất 6 ký tự.
+          }
+        </p>
+      }
+      @if (fieldError('password'); as message) {
+        <p class="sh-field-error">{{ message }}</p>
+      }
+    </div>
+
+    <button
+      type="submit"
+      class="w-full rounded-md bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+      [disabled]="submitting()"
+    >
+      {{ submitting() ? 'Đang đăng nhập…' : 'Đăng nhập' }}
+    </button>
+  </form>
+
+  <p class="mt-4 text-sm text-slate-500">
+    Chưa có tài khoản?
+    <a routerLink="/register" class="font-medium text-brand-700 hover:underline">Đăng ký ngay</a>
+  </p>
+</section>

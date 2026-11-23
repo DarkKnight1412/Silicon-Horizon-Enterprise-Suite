@@ -1,0 +1,163 @@
+<section class="sh-card p-6">
+  <h1 class="sh-page-title">Đăng ký tài khoản</h1>
+  <p class="mt-1 text-sm text-slate-500">Tài khoản dành cho khách hàng mua linh kiện.</p>
+
+  @if (apiError(); as error) {
+    <div class="mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+      <p class="font-semibold">{{ error.message }}</p>
+      @if (error.detail) {
+        <p class="mt-0.5 text-xs">Mã lỗi: {{ error.detail }}</p>
+      }
+      @if (error.correlationId) {
+        <p class="mt-0.5 break-all font-mono text-[11px]">correlationId: {{ error.correlationId }}</p>
+      }
+    </div>
+  }
+
+  <form class="mt-5 space-y-4" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="fullName">Họ và tên</label>
+      <input
+        id="fullName"
+        type="text"
+        formControlName="fullName"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        [class.sh-input-invalid]="form.controls.fullName.touched && form.controls.fullName.invalid"
+      />
+      @if (form.controls.fullName.touched && form.controls.fullName.invalid) {
+        <p class="sh-field-error">Vui lòng nhập họ tên (tối đa 150 ký tự).</p>
+      }
+      @if (fieldError('fullName'); as message) {
+        <p class="sh-field-error">{{ message }}</p>
+      }
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="phone">Số điện thoại</label>
+      <input
+        id="phone"
+        type="tel"
+        inputmode="tel"
+        placeholder="0912345678"
+        formControlName="phone"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        [class.sh-input-invalid]="form.controls.phone.touched && form.controls.phone.invalid"
+      />
+      @if (form.controls.phone.touched && form.controls.phone.invalid) {
+        <p class="sh-field-error">
+          @if (form.controls.phone.errors?.['required']) {
+            Vui lòng nhập số điện thoại.
+          } @else {
+            Số điện thoại không hợp lệ (dạng 0xxxxxxxxx hoặc +84xxxxxxxxx).
+          }
+        </p>
+      }
+      @if (fieldError('phone'); as message) {
+        <p class="sh-field-error">{{ message }}</p>
+      }
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="email">Email (không bắt buộc)</label>
+      <input
+        id="email"
+        type="email"
+        formControlName="email"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        [class.sh-input-invalid]="form.controls.email.touched && form.controls.email.invalid"
+      />
+      @if (form.controls.email.touched && form.controls.email.invalid) {
+        <p class="sh-field-error">Email không đúng định dạng.</p>
+      }
+      @if (fieldError('email'); as message) {
+        <p class="sh-field-error">{{ message }}</p>
+      }
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="username">Tên đăng nhập</label>
+      <input
+        id="username"
+        type="text"
+        formControlName="username"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        [class.sh-input-invalid]="form.controls.username.touched && form.controls.username.invalid"
+      />
+      @if (form.controls.username.touched && form.controls.username.invalid) {
+        <p class="sh-field-error">Tên đăng nhập từ 4 đến 50 ký tự.</p>
+      }
+      @if (fieldError('username'); as message) {
+        <p class="sh-field-error">{{ message }}</p>
+      }
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="password">Mật khẩu</label>
+      <input
+        id="password"
+        type="password"
+        autocomplete="new-password"
+        formControlName="password"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        [class.sh-input-invalid]="form.controls.password.touched && form.controls.password.invalid"
+      />
+
+      <div class="mt-2 flex items-center gap-2">
+        <span class="h-1.5 flex-1 rounded-full bg-slate-200">
+          <span
+            class="block h-1.5 rounded-full"
+            [class]="strength().barClass"
+            [style.width.%]="strength().score * 25"
+          ></span>
+        </span>
+        <span class="text-xs text-slate-500">{{ strength().label }}</span>
+      </div>
+
+      @if (missingPasswordRules().length > 0) {
+        <p class="sh-field-error">Cần thêm: {{ missingPasswordRules().join(', ') }}.</p>
+      }
+      @if (fieldError('password'); as message) {
+        <p class="sh-field-error">{{ message }}</p>
+      }
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="confirmPassword">
+        Xác nhận mật khẩu
+      </label>
+      <input
+        id="confirmPassword"
+        type="password"
+        autocomplete="new-password"
+        formControlName="confirmPassword"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        [class.sh-input-invalid]="
+          form.controls.confirmPassword.touched && form.controls.confirmPassword.invalid
+        "
+      />
+      @if (form.controls.confirmPassword.touched && form.controls.confirmPassword.invalid) {
+        <p class="sh-field-error">
+          @if (form.controls.confirmPassword.errors?.['passwordMismatch']) {
+            Hai mật khẩu không khớp nhau.
+          } @else {
+            Vui lòng nhập lại mật khẩu.
+          }
+        </p>
+      }
+    </div>
+
+    <button
+      type="submit"
+      class="w-full rounded-md bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+      [disabled]="submitting()"
+    >
+      {{ submitting() ? 'Đang tạo tài khoản…' : 'Đăng ký' }}
+    </button>
+  </form>
+
+  <p class="mt-4 text-sm text-slate-500">
+    Đã có tài khoản?
+    <a routerLink="/login" class="font-medium text-brand-700 hover:underline">Đăng nhập</a>
+  </p>
+</section>
+

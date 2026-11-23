@@ -1,0 +1,128 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Tiếp nhận bảo hành</h1>
+      <p class="text-sm text-slate-500">
+        Chi nhánh tiếp nhận lấy từ tài khoản đăng nhập. Nếu sản phẩm hết hạn bảo hành, phiếu được tạo
+        ngay ở trạng thái Từ chối.
+      </p>
+    </div>
+    <a
+      routerLink="/warranty/tickets"
+      class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+    >
+      ← Danh sách phiếu
+    </a>
+  </header>
+
+  <form class="sh-card space-y-4 p-4" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="grid gap-3 sm:grid-cols-3">
+      <div class="sm:col-span-2">
+        <label class="block text-sm font-medium text-slate-700" for="serialNumber">
+          Số serial của hàng bảo hành
+        </label>
+        <input
+          id="serialNumber"
+          type="search"
+          formControlName="serialNumber"
+          placeholder="Bắt buộc với hàng quản lý serial (serial phải đang Đã bán)"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-sm"
+        />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700" for="productId">
+          ID sản phẩm (nếu serial trùng)
+        </label>
+        <input
+          id="productId"
+          type="number"
+          min="1"
+          step="1"
+          formControlName="productId"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700" for="orderItemId">
+          ID dòng hàng của đơn
+        </label>
+        <input
+          id="orderItemId"
+          type="number"
+          min="1"
+          step="1"
+          formControlName="orderItemId"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        />
+        <p class="mt-1 text-xs text-slate-500">Dùng cho hàng KHÔNG quản lý serial.</p>
+      </div>
+    </div>
+
+    @if (form.errors?.['identifier']; as identifierError) {
+      <p class="sh-field-error">{{ identifierError.message }}</p>
+    }
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="issueDescription">
+        Mô tả lỗi khách báo <span class="text-rose-600">*</span>
+      </label>
+      <textarea
+        id="issueDescription"
+        rows="3"
+        formControlName="issueDescription"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        [class.sh-input-invalid]="
+          form.controls.issueDescription.touched && form.controls.issueDescription.invalid
+        "
+      ></textarea>
+      @if (form.controls.issueDescription.touched && form.controls.issueDescription.invalid) {
+        <p class="sh-field-error">Mô tả lỗi bắt buộc, tối đa 1000 ký tự.</p>
+      }
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="conditionNotes">
+        Tình trạng ngoại quan khi nhận
+      </label>
+      <textarea
+        id="conditionNotes"
+        rows="2"
+        formControlName="conditionNotes"
+        placeholder="Trầy xước, mất tem, phụ kiện kèm theo…"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      ></textarea>
+      @if (form.controls.conditionNotes.touched && form.controls.conditionNotes.invalid) {
+        <p class="sh-field-error">Tối đa 1000 ký tự.</p>
+      }
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="rejectReason">
+        Lý do từ chối ngay (nếu có)
+      </label>
+      <textarea
+        id="rejectReason"
+        rows="2"
+        formControlName="rejectReason"
+        placeholder="Để trống nếu tiếp nhận bình thường"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      ></textarea>
+      @if (form.controls.rejectReason.touched && form.controls.rejectReason.invalid) {
+        <p class="sh-field-error">Tối đa 500 ký tự.</p>
+      }
+      <p class="mt-1 text-xs text-slate-500">
+        Có lý do từ chối thì phiếu vào thẳng trạng thái Từ chối và serial vẫn giữ trạng thái Đã bán.
+      </p>
+    </div>
+
+    <button
+      type="submit"
+      class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+      [disabled]="submitting()"
+    >
+      {{ submitting() ? 'Đang tiếp nhận…' : 'Tiếp nhận bảo hành' }}
+    </button>
+  </form>
+</section>

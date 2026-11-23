@@ -1,0 +1,354 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Chấm công &amp; bảng công tháng</h1>
+      <p class="text-sm text-slate-500">
+        Nhân viên xem công của mình; Quản lý chi nhánh xem cả chi nhánh và điều chỉnh khi cần.
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a
+        routerLink="/hr/schedules"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        Bảng xếp ca
+      </a>
+      @if (canCheckInOut()) {
+        <button
+          type="button"
+          class="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          [disabled]="busy()"
+          (click)="checkIn()"
+        >
+          Chấm công vào
+        </button>
+        <button
+          type="button"
+          class="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+          [disabled]="busy()"
+          (click)="checkOut()"
+        >
+          Chấm công ra
+        </button>
+      }
+      @if (canAdjust()) {
+        <button
+          type="button"
+          class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+          (click)="openAdjust()"
+        >
+          Điều chỉnh công
+        </button>
+      }
+    </div>
+  </header>
+
+  <form class="sh-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4" [formGroup]="filters" (ngSubmit)="load()" novalidate>
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="yearMonth">
+        Tháng (yyyy-MM) <span class="text-rose-600">*</span>
+      </label>
+      <input
+        id="yearMonth"
+        type="month"
+        formControlName="yearMonth"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        [class.sh-input-invalid]="filters.controls.yearMonth.touched && filters.controls.yearMonth.invalid"
+      />
+      @if (filters.controls.yearMonth.touched && filters.controls.yearMonth.invalid) {
+        <p class="sh-field-error">Chọn tháng theo định dạng yyyy-MM.</p>
+      }
+    </div>
+
+    @if (isAdmin()) {
+      <div>
+        <label class="block text-sm font-medium text-slate-700" for="employeeFilter">
+          Nhân viên (chỉ Admin lọc được)
+        </label>
+        <select
+          id="employeeFilter"
+          formControlName="employeeId"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        >
+          <option [ngValue]="null">Tất cả nhân viên</option>
+          @for (employee of employees(); track employee.id) {
+            <option [ngValue]="employee.id">{{ employeeLabel(employee) }}</option>
+          }
+        </select>
+      </div>
+    }
+
+    <div class="flex items-end gap-2">
+      <button
+        type="submit"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+      >
+        Xem bảng công
+      </button>
+    </div>
+  </form>
+
+  @if (loading()) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tải bảng công…</div>
+  } @else if (month(); as data) {
+    <!-- Tổng hợp theo nhân viên -->
+    <div class="sh-card overflow-x-auto">
+      <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+        <h2 class="text-sm font-semibold text-slate-700">
+          Tổng hợp tháng {{ data.yearMonth }} ({{ data.employees.length }} nhân viên)
+        </h2>
+        <label class="flex items-center gap-2 text-xs text-slate-600">
+          <span>Lọc chi tiết theo nhân viên</span>
+          <select
+            class="rounded-md border border-slate-300 px-2 py-1"
+            [value]="detailEmployeeId() ?? ''"
+            (change)="onDetailEmployeeChange($event)"
+          >
+            <option value="">Tất cả</option>
+            @for (employee of data.employees; track employee.employeeId) {
+              <option [value]="employee.employeeId">{{ employee.employeeName }}</option>
+            }
+          </select>
+        </label>
+      </div>
+
+      @if (data.employees.length === 0) {
+        <app-empty-state
+          icon="⏱️"
+          title="Tháng này chưa có dữ liệu công"
+          description="Bảng công sẽ xuất hiện sau khi nhân viên chấm công hoặc quản lý điều chỉnh."
+        />
+      } @else {
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <tr>
+              <th class="px-3 py-2">Nhân viên</th>
+              <th class="px-3 py-2 text-right">Ngày có công</th>
+              <th class="px-3 py-2 text-right">Tổng giờ</th>
+              <th class="px-3 py-2 text-right">Ca đã xếp</th>
+              <th class="px-3 py-2 text-right">Thiếu giờ ra</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (summary of data.employees; track summary.employeeId) {
+              <tr>
+                <td class="px-3 py-2 text-slate-800">{{ summary.employeeName }}</td>
+                <td class="px-3 py-2 text-right text-slate-700">{{ summary.daysWorked }}</td>
+                <td class="px-3 py-2 text-right text-slate-700">{{ summary.totalHours }}</td>
+                <td class="px-3 py-2 text-right text-slate-700">{{ summary.scheduledShifts }}</td>
+                <td class="px-3 py-2 text-right">
+                  @if (summary.missingCheckOut > 0) {
+                    <span
+                      class="rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800"
+                    >
+                      {{ summary.missingCheckOut }}
+                    </span>
+                  } @else {
+                    <span class="text-slate-400">0</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+
+    <!-- Chi tiết từng ngày công -->
+    <div class="sh-card overflow-x-auto">
+      <h2 class="px-3 py-2 text-sm font-semibold text-slate-700">
+        Chi tiết ngày công ({{ dayRows().length }} bản ghi)
+      </h2>
+
+      @if (dayRows().length === 0) {
+        <app-empty-state icon="📄" title="Không có bản ghi công nào khớp bộ lọc." />
+      } @else {
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <tr>
+              <th class="px-3 py-2">Ngày</th>
+              <th class="px-3 py-2">Nhân viên</th>
+              <th class="px-3 py-2">Ca</th>
+              <th class="px-3 py-2">Giờ vào</th>
+              <th class="px-3 py-2">Giờ ra</th>
+              <th class="px-3 py-2 text-right">Giờ làm</th>
+              <th class="px-3 py-2">Nguồn</th>
+              @if (canAdjust()) {
+                <th class="px-3 py-2 text-right"></th>
+              }
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (day of dayRows(); track $index) {
+              <tr>
+                <td class="px-3 py-2 font-medium text-slate-800">{{ day.workDate }}</td>
+                <td class="px-3 py-2 text-slate-700">{{ day.employeeName }}</td>
+                <td class="px-3 py-2 text-slate-600">
+                  {{ day.shiftCode ?? '—' }}
+                  @if (day.startTime) {
+                    <span class="block text-xs text-slate-500">
+                      bắt đầu {{ formatShiftTime(day.startTime) }}
+                    </span>
+                  }
+                </td>
+                <td class="px-3 py-2 text-slate-600">
+                  {{ formatMoment(day.checkInAt) }}
+                  @if (day.isLate) {
+                    <span
+                      class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-800"
+                    >
+                      muộn
+                    </span>
+                  }
+                </td>
+                <td class="px-3 py-2 text-slate-600">{{ formatMoment(day.checkOutAt) }}</td>
+                <td class="px-3 py-2 text-right text-slate-700">
+                  {{ formatWorkedMinutes(day.workedMinutes) }}
+                </td>
+                <td class="px-3 py-2 text-xs text-slate-600">
+                  {{ sourceLabel(day.source) }}
+                  @if (day.adjustReason) {
+                    <span class="block text-slate-500">Lý do: {{ day.adjustReason }}</span>
+                  }
+                </td>
+                @if (canAdjust()) {
+                  <td class="px-3 py-2 text-right">
+                    <button
+                      type="button"
+                      class="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                      (click)="openAdjust(day)"
+                    >
+                      Điều chỉnh
+                    </button>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  } @else {
+    <div class="sh-card">
+      <app-empty-state
+        icon="⏱️"
+        title="Chưa có dữ liệu bảng công"
+        description="Chọn tháng và bấm “Xem bảng công”."
+      />
+    </div>
+  }
+
+  <!-- Hộp thoại điều chỉnh công (QL/AD, bắt buộc lý do) -->
+  @if (adjustOpen()) {
+    <div class="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4">
+      <div class="sh-card w-full max-w-lg p-5">
+        <h2 class="sh-page-title">Điều chỉnh công</h2>
+        <p class="mt-1 text-xs text-slate-500">
+          Nhập giờ theo giờ địa phương; hệ thống đổi sang UTC trước khi gửi. Mọi lần điều chỉnh đều
+          ghi nhật ký kèm lý do (HR-06).
+        </p>
+
+        <form class="mt-3 space-y-3" [formGroup]="adjustForm" (ngSubmit)="submitAdjust()" novalidate>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label class="block text-sm font-medium text-slate-700" for="adjustEmployee">
+                Nhân viên <span class="text-rose-600">*</span>
+              </label>
+              @if (isAdmin()) {
+                <select
+                  id="adjustEmployee"
+                  formControlName="employeeId"
+                  class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                >
+                  <option [ngValue]="null">— Chọn nhân viên —</option>
+                  @for (employee of employees(); track employee.id) {
+                    <option [ngValue]="employee.id">{{ employeeLabel(employee) }}</option>
+                  }
+                </select>
+              } @else {
+                <input
+                  id="adjustEmployee"
+                  type="number"
+                  min="1"
+                  formControlName="employeeId"
+                  class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                />
+                <p class="mt-1 text-xs text-slate-500">
+                  Nhập mã nhân viên thuộc chi nhánh của bạn.
+                </p>
+              }
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700" for="adjustWorkDate">
+                Ngày công <span class="text-rose-600">*</span>
+              </label>
+              <input
+                id="adjustWorkDate"
+                type="date"
+                formControlName="workDate"
+                class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700" for="adjustCheckIn">
+                Giờ vào
+              </label>
+              <input
+                id="adjustCheckIn"
+                type="datetime-local"
+                formControlName="checkIn"
+                class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700" for="adjustCheckOut">
+                Giờ ra
+              </label>
+              <input
+                id="adjustCheckOut"
+                type="datetime-local"
+                formControlName="checkOut"
+                class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700" for="adjustReason">
+              Lý do điều chỉnh <span class="text-rose-600">*</span>
+            </label>
+            <textarea
+              id="adjustReason"
+              rows="3"
+              formControlName="reason"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            ></textarea>
+            @if (adjustForm.controls.reason.touched && adjustForm.controls.reason.invalid) {
+              <p class="sh-field-error">Vui lòng nhập lý do (tối đa 300 ký tự).</p>
+            }
+          </div>
+
+          <div class="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+              (click)="closeAdjust()"
+            >
+              Đóng
+            </button>
+            <button
+              type="submit"
+              class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+              [disabled]="busy()"
+            >
+              Lưu điều chỉnh
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</section>

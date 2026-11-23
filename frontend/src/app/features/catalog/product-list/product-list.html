@@ -1,0 +1,219 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h1 class="sh-page-title">Danh mục sản phẩm</h1>
+      <p class="text-sm text-slate-500">{{ result().totalCount }} sản phẩm phù hợp</p>
+    </div>
+    <a
+      routerLink="/catalog/compatibility"
+      class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+    >
+      🧩 Kiểm tra tương thích
+    </a>
+  </header>
+
+  <!-- Bộ lọc: giá trị được đẩy vào query param của URL để tải lại trang vẫn giữ điều kiện -->
+  <form
+    class="sh-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4"
+    [formGroup]="filters"
+    (ngSubmit)="search(1, result().pageSize)"
+  >
+    <div class="sm:col-span-2">
+      <label class="block text-sm font-medium text-slate-700" for="keyword">Từ khoá</label>
+      <input
+        id="keyword"
+        type="search"
+        placeholder="Tên sản phẩm hoặc đầu mã SKU…"
+        formControlName="keyword"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="categoryCode">Danh mục</label>
+      <select
+        id="categoryCode"
+        formControlName="categoryCode"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      >
+        <option value="">Tất cả danh mục</option>
+        @for (category of categories(); track category.id) {
+          <option [value]="category.code ?? ''">{{ category.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="brandId">Thương hiệu</label>
+      <select
+        id="brandId"
+        formControlName="brandId"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      >
+        <option [ngValue]="null">Tất cả thương hiệu</option>
+        @for (brand of brands(); track brand.id) {
+          <option [ngValue]="brand.id">{{ brand.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="minPrice">Giá từ (VND)</label>
+      <input
+        id="minPrice"
+        type="number"
+        min="0"
+        formControlName="minPrice"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="maxPrice">Giá đến (VND)</label>
+      <input
+        id="maxPrice"
+        type="number"
+        min="0"
+        formControlName="maxPrice"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+
+    <div class="sm:col-span-2">
+      <label class="block text-sm font-medium text-slate-700" for="specFilters">
+        Lọc theo thông số
+      </label>
+      <input
+        id="specFilters"
+        type="text"
+        placeholder="memoryType:DDR5,capacityGbPerKit:32"
+        formControlName="specFilters"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-xs"
+      />
+      <p class="mt-1 text-xs text-slate-500">
+        Cú pháp <code>tênTrường:giáTrị</code>, nhiều điều kiện cách nhau bằng dấu phẩy (AND).
+      </p>
+    </div>
+
+    <div class="flex flex-col justify-end gap-2">
+      <label class="flex items-center gap-2 text-sm text-slate-700">
+        <input type="checkbox" formControlName="inStockOnly" class="h-4 w-4 rounded border-slate-300" />
+        Chỉ hiện còn hàng
+      </label>
+      <label class="flex items-center gap-2 text-sm text-slate-700">
+        <input type="checkbox" formControlName="onPromotion" class="h-4 w-4 rounded border-slate-300" />
+        Chỉ hiện đang khuyến mãi
+      </label>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700" for="sortBy">Sắp xếp</label>
+      <select
+        id="sortBy"
+        formControlName="sortBy"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      >
+        @for (option of sortOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="flex items-end gap-2">
+      <button
+        type="submit"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+      >
+        Tìm kiếm
+      </button>
+      <button
+        type="button"
+        class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+        (click)="resetFilters()"
+      >
+        Xoá lọc
+      </button>
+    </div>
+  </form>
+
+  <!-- Kết quả -->
+  @if (loading()) {
+    <div class="sh-card p-8 text-center text-sm text-slate-500">Đang tải sản phẩm…</div>
+  } @else if (result().items.length === 0) {
+    <div class="sh-card">
+      <app-empty-state
+        icon="🔍"
+        title="Không có sản phẩm phù hợp"
+        description="Thử bỏ vài điều kiện lọc hoặc dùng từ khoá khác."
+        actionLabel="Xoá bộ lọc"
+        (action)="resetFilters()"
+      />
+    </div>
+  } @else {
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      @for (product of result().items; track product.id) {
+        <article class="sh-card flex flex-col overflow-hidden">
+          <a
+            class="block h-40 bg-slate-100"
+            [routerLink]="['/catalog/products', product.id]"
+            [attr.aria-label]="product.name"
+          >
+            @if (product.imageUrl) {
+              <img class="h-full w-full object-cover" [src]="product.imageUrl" [alt]="product.name" />
+            } @else {
+              <span class="grid h-full place-items-center text-3xl">🖥️</span>
+            }
+          </a>
+
+          <div class="flex flex-1 flex-col gap-2 p-3">
+            <p class="text-[11px] uppercase tracking-wide text-slate-400">
+              {{ product.brandName }} · {{ product.sku }}
+            </p>
+            <a
+              class="line-clamp-2 text-sm font-semibold text-slate-800 hover:text-brand-700"
+              [routerLink]="['/catalog/products', product.id]"
+            >
+              {{ product.name }}
+            </a>
+            <p class="text-xs text-slate-500">Bảo hành {{ product.warrantyMonths }} tháng</p>
+
+            <div class="mt-auto space-y-1">
+              <p class="text-base font-semibold text-brand-700">{{ formatPrice(product.price) }}</p>
+              @if (product.price < product.basePrice) {
+                <p class="text-xs text-slate-400 line-through">
+                  {{ formatPrice(product.basePrice) }}
+                </p>
+              }
+              <p
+                class="text-xs"
+                [class]="product.availableQty > 0 ? 'text-emerald-600' : 'text-rose-600'"
+              >
+                {{ product.availableQty > 0 ? 'Còn ' + product.availableQty + ' sản phẩm' : 'Hết hàng' }}
+              </p>
+
+              <button
+                type="button"
+                class="mt-1 w-full rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+                [disabled]="product.availableQty <= 0 || addingProductId() === product.id"
+                (click)="addToCart(product)"
+              >
+                {{ addingProductId() === product.id ? 'Đang thêm…' : 'Thêm vào giỏ' }}
+              </button>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+
+    <div class="sh-card">
+      <app-pagination
+        [pageNumber]="result().pageNumber"
+        [pageSize]="result().pageSize"
+        [totalCount]="result().totalCount"
+        [totalPages]="result().totalPages"
+        (pageChange)="onPageChange($event)"
+        (pageSizeChange)="onPageSizeChange($event)"
+      />
+    </div>
+  }
+</section>

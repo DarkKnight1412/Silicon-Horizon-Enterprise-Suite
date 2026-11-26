@@ -133,3 +133,46 @@ public class SelectAllCartItemsRequest
     /// <summary><c>true</c> = chọn tất cả, <c>false</c> = bỏ chọn tất cả. Món hết hàng không bao giờ được tick.</summary>
     public bool IsSelected { get; set; } = true;
 }
+
+/// <summary>
+/// POST /api/v1/cart/items/bulk — thêm NHIỀU sản phẩm trong MỘT giao dịch (khớp <c>usp_Cart_AddItems</c>).
+/// Dùng cho tab "Tự build PC": khách chốt cấu hình ⇒ thêm cả bộ linh kiện đã chọn một lần.
+/// </summary>
+public class AddCartItemsRequest
+{
+    /// <summary>Danh sách sản phẩm; rỗng ⇒ 400 (proc báo 50004). Sản phẩm trùng sẽ được cộng dồn số lượng.</summary>
+    public IReadOnlyList<AddCartItemInput> Items { get; set; } = Array.Empty<AddCartItemInput>();
+}
+
+/// <summary>Một dòng trong <see cref="AddCartItemsRequest"/>.</summary>
+public class AddCartItemInput
+{
+    public long ProductId { get; set; }
+
+    /// <summary>Số lượng; phải lớn hơn 0 (proc báo 50004 nếu không).</summary>
+    public int Quantity { get; set; } = 1;
+}
+
+/// <summary>Kết quả thêm nhiều sản phẩm — result set của <c>usp_Cart_AddItems</c>.</summary>
+public class AddedCartItemsResultDto
+{
+    /// <summary>Tổng số dòng đã thêm/cập nhật trong giỏ.</summary>
+    public int ItemCount { get; init; }
+
+    public IReadOnlyList<AddedCartItemDetailDto> Items { get; init; } = Array.Empty<AddedCartItemDetailDto>();
+}
+
+/// <summary>Một dòng vừa được thêm vào giỏ (theo bộ linh kiện khách tự chọn).</summary>
+public class AddedCartItemDetailDto
+{
+    public long ProductId { get; init; }
+
+    public string Name { get; init; } = string.Empty;
+
+    /// <summary>Số lượng vừa thêm.</summary>
+    public int AddedQuantity { get; init; }
+
+    /// <summary>Số lượng HIỆN CÓ trong giỏ sau khi thêm.</summary>
+    public int CartQuantity { get; init; }
+}
+

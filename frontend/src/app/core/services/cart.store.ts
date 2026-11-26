@@ -11,6 +11,8 @@ import {
   type SelectAllCartItemsRequest,
   type UpdateCartItemRequest,
 } from '../models/cart.model';
+import type { AddPcBuildToCartRequest } from '../models/pc-build.model';
+import type { AddCartItemsRequest, AddCartItemInput } from '../models/cart.model';
 
 /**
  * STATE TOÀN CỤC của giỏ hàng: badge trên header và trang giỏ cùng đọc một nguồn dữ liệu.
@@ -64,6 +66,30 @@ export class CartStore {
   add(productId: number, quantity = 1, replace = false): Observable<CartDto> {
     const body: AddCartItemRequest = { productId, quantity, replace };
     return this.mutate(this.api.post<unknown>('/v1/cart/items', body, this.options()));
+  }
+
+  /**
+   * POST /api/v1/pc-builds/{id}/add-to-cart — thêm CẢ BỘ PC build sẵn (mọi linh kiện) vào giỏ.
+   * Backend thực hiện trong MỘT giao dịch và kiểm tra tồn của từng linh kiện: thiếu tồn ⇒ 409
+   * kèm tên linh kiện thiếu và KHÔNG thêm gì cả. Sau khi thêm, giỏ được nạp lại (`mutate`) nên
+   * badge trên header và tổng tiền ở trang giỏ luôn khớp tồn kho thực tế.
+   */
+  addBuild(pcBuildId: number, quantity = 1): Observable<CartDto> {
+    const body: AddPcBuildToCartRequest = { quantity };
+    return this.mutate(
+      this.api.post<unknown>(`/v1/pc-builds/${pcBuildId}/add-to-cart`, body, this.options()),
+    );
+  }
+
+  /**
+   * POST /api/v1/cart/items/bulk — thêm NHIỀU sản phẩm trong MỘT giao dịch (tab "Tự build PC").
+   * Backend kiểm tra tồn của từng dòng trước khi ghi: chỉ cần một linh kiện thiếu là KHÔNG thêm gì cả
+   * và thông điệp lỗi nêu rõ tên linh kiện đó. Sau khi thêm, giỏ được nạp lại (`mutate`) nên badge
+   * trên header và tổng tiền ở trang giỏ luôn khớp tồn kho thực tế.
+   */
+  addItems(items: readonly AddCartItemInput[]): Observable<CartDto> {
+    const body: AddCartItemsRequest = { items: [...items] };
+    return this.mutate(this.api.post<unknown>('/v1/cart/items/bulk', body, this.options()));
   }
 
   /** PATCH /api/v1/cart/items/{productId} — đổi số lượng (quantity <= 0 để xoá dòng). */

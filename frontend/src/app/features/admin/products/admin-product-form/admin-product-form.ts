@@ -189,7 +189,11 @@ export class AdminProductForm implements PendingChangesAware {
   // ───────────────────────────────────────────────────────────────────────────
 
   protected addImage(): void {
-    this.images.push(this.createImageGroup());
+    // Điền sẵn đường dẫn theo QUY ƯỚC (`/images/products/<sku>.jpg`) khi đã có mã SKU — để mọi ảnh
+    // sản phẩm cùng một dạng đường dẫn (xem Database/README.md mục 3.3).
+    const base = this.conventionImageUrl();
+
+    this.images.push(this.createImageGroup(base.length === 0 ? '' : `${base}.jpg`));
     this.dirty.set(true);
   }
 
@@ -200,6 +204,82 @@ export class AdminProductForm implements PendingChangesAware {
 
   protected imageGroupAt(index: number): ImageFormGroup {
     return this.images.at(index);
+  }
+
+  /**
+   * Áp QUY ƯỚC đường dẫn ảnh cho một dòng: `/images/products/<sku>.<ext>`.
+   *
+   * File ảnh nằm trong `frontend/public/images/products/`, tên file = mã SKU viết thường ⇒ URL công khai
+   * là `/images/products/<sku>.<ext>`. Giữ phần mở rộng đang có của dòng đó (mặc định `.jpg`).
+   */
+  protected applyImageConvention(index: number): void {
+    const base = this.conventionImageUrl();
+
+    if (base.length === 0) {
+      this.notifications.warning(
+        'Chưa có mã SKU',
+        'Nhập mã SKU trước để sinh đường dẫn ảnh theo quy ước.',
+      );
+      return;
+    }
+
+    const group = this.imageGroupAt(index);
+    const current = group.controls.url.value.trim();
+    const extension = /\.(png|jpe?g|webp|gif|avif)$/i.exec(current)?.[0] ?? '.jpg';
+
+    group.controls.url.setValue(`${base}${extension}`);
+    this.dirty.set(true);
+  }
+
+  /** Đường dẫn ảnh theo quy ước KHÔNG kèm phần mở rộng (rỗng nếu chưa nhập mã SKU). */
+  private conventionImageUrl(): string {
+    const sku = slugify(this.form.controls.sku.value);
+
+    return sku.length === 0 ? '' : `/images/products/${sku}`;
+  }
+
+  /** Dòng ảnh đang tải lên (để khoá input file + hiện trạng thái). */
+  protected readonly uploadingIndex = signal<number | null>(null);
+
+  /**
+   * Upload ảnh từ máy của nhân viên (POST /api/v1/admin/products/images) rồi điền URL do API trả về vào
+   * dòng ảnh tương ứng. Ảnh được lưu ở phía API (`wwwroot/images/products/`) nên không cần build lại web.
+   */
+  protected uploadImage(index: number, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+
+    // Xoá giá trị input ngay để chọn lại CÙNG một file vẫn kích hoạt (change).
+    input.value = '';
+
+    if (file === null) {
+      return;
+    }
+
+    const sku = slugify(this.form.controls.sku.value);
+
+    if (sku.length === 0) {
+      this.notifications.warning('Chưa có mã SKU', 'Nhập mã SKU trước khi tải ảnh lên.');
+      return;
+    }
+
+    // Giữ tham chiếu nhóm control trước khi chờ API (phòng khi dòng bị xoá giữa lúc upload).
+    const group = this.imageGroupAt(index);
+
+    this.uploadingIndex.set(index);
+
+    this.adminApi.uploadProductImage(sku, file).subscribe({
+      next: (result) => {
+        this.uploadingIndex.set(null);
+        group.controls.url.setValue(result.url);
+        this.dirty.set(true);
+        this.notifications.success(
+          'Đã tải ảnh lên',
+          'Ảnh đã sẵn sàng — nhớ bấm Lưu để ghi vào sản phẩm.',
+        );
+      },
+      error: () => this.uploadingIndex.set(null),
+    });
   }
 
   // ───────────────────────────────────────────────────────────────────────────

@@ -874,6 +874,79 @@ BEGIN
 END
 GO
 
+/* POST /api/cart/items/bulk  - thêm NHIỀU sản phẩm vào giỏ trong MỘT giao dịch (TỰ BUILD PC).
+   @ItemsJson: [{"productId":12,"quantity":1}, ...] (camelCase). Dùng khi khách CHỐT cả cấu hình đã tự
+   chọn ở tab "Tự build PC" ⇒ thêm mọi linh kiện một lần, không sợ thêm được nửa chừng.
+   Bất kỳ dòng nào ngừng bán/thiếu tồn ⇒ KHÔNG thêm gì và báo rõ tên linh kiện (50001/50003).
+   Result set: từng dòng đã thêm + số lượng hiện có trong giỏ. */
+CREATE OR ALTER PROCEDURE dbo.usp_Cart_AddItems
+    @CustomerId bigint = NULL, @SessionToken varchar(64) = NULL, @ItemsJson nvarchar(max)
+AS
+BEGIN
+    SET NOCOUNT ON; SET XACT_ABORT ON;
+    BEGIN TRY
+        CREATE TABLE #I (ProductId bigint PRIMARY KEY, Quantity int NOT NULL);
+        INSERT #I (ProductId, Quantity)
+        SELECT productId, SUM(quantity) AS Quantity
+          FROM OPENJSON(@ItemsJson) WITH (productId bigint '$.productId', quantity int '$.quantity')
+         GROUP BY productId;
+
+        IF NOT EXISTS (SELECT 1 FROM #I) THROW 50004, N'Danh sách sản phẩm cần thêm đang trống.', 1;
+        IF EXISTS (SELECT 1 FROM #I WHERE ProductId IS NULL OR Quantity <= 0)
+            THROW 50004, N'Số lượng mỗi sản phẩm phải lớn hơn 0.', 1;
+
+        DECLARE @CartId bigint, @Stop nvarchar(260);
+
+        SELECT TOP 1 @Stop = N'Sản phẩm có mã Id = ' + CAST(i.ProductId AS nvarchar(20))
+                           + N' không tồn tại hoặc đã ngừng kinh doanh.'
+          FROM #I i LEFT JOIN dbo.Products p ON p.Id = i.ProductId
+         WHERE p.Id IS NULL OR p.Status <> 1
+         ORDER BY i.ProductId;
+        IF @Stop IS NOT NULL THROW 50001, @Stop, 1;
+
+        BEGIN TRANSACTION;
+            EXEC dbo.usp_Internal_ResolveCart @CustomerId, @SessionToken, 1, @CartId OUTPUT;
+
+            SELECT TOP 1 @Stop = N'Linh kiện "' + p.Name + N'" chỉ còn ' + CAST(st.Avail AS nvarchar(10))
+                               + N' trong kho, không đủ ' + CAST(i.Quantity AS nvarchar(10)) + N' cái.'
+              FROM #I i
+              JOIN dbo.Products p ON p.Id = i.ProductId
+              LEFT JOIN dbo.CartItems ci ON ci.CartId = @CartId AND ci.ProductId = i.ProductId
+              CROSS APPLY (SELECT ISNULL(SUM(sl.AvailableQty), 0) AS Avail
+                             FROM dbo.StockLevels sl
+                             JOIN dbo.Branches br ON br.Id = sl.BranchId AND br.IsActive = 1
+                            WHERE sl.ProductId = i.ProductId) st
+             WHERE ISNULL(ci.Quantity, 0) + i.Quantity > st.Avail
+             ORDER BY i.ProductId;
+            IF @Stop IS NOT NULL THROW 50003, @Stop, 1;
+
+            UPDATE ci
+               SET Quantity = ci.Quantity + i.Quantity
+              FROM dbo.CartItems ci
+              JOIN #I i ON i.ProductId = ci.ProductId
+             WHERE ci.CartId = @CartId;
+
+            INSERT dbo.CartItems (CartId, ProductId, Quantity)
+            SELECT @CartId, i.ProductId, i.Quantity
+              FROM #I i
+             WHERE NOT EXISTS (SELECT 1 FROM dbo.CartItems x WHERE x.CartId = @CartId AND x.ProductId = i.ProductId);
+
+            UPDATE dbo.Carts SET UpdatedAt = SYSUTCDATETIME() WHERE Id = @CartId;
+        COMMIT TRANSACTION;
+
+        SELECT i.ProductId, p.Name, i.Quantity AS AddedQuantity, ci.Quantity AS CartQuantity
+          FROM #I i
+          JOIN dbo.Products p ON p.Id = i.ProductId
+          JOIN dbo.CartItems ci ON ci.CartId = @CartId AND ci.ProductId = i.ProductId
+         ORDER BY p.Name;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+
 /* POST /api/vouchers/validate  - kiểm tra mã trước khi đặt hàng */
 CREATE OR ALTER PROCEDURE dbo.usp_Voucher_Validate
     @Code varchar(40), @CustomerId bigint, @OrderAmount decimal(18,0), @HasPromotion bit = 0

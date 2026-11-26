@@ -6,8 +6,10 @@ using SiliconHorizon.Api.Constants;
 using SiliconHorizon.Api.Exceptions;
 using SiliconHorizon.Api.Middleware;
 using SiliconHorizon.Api.Security;
+using SiliconHorizon.Api.Storage;
 using SiliconHorizon.Application;
 using SiliconHorizon.Application.Abstractions.Security;
+using SiliconHorizon.Application.Features.Admin;
 using SiliconHorizon.Infrastructure;
 
 namespace SiliconHorizon.Api;
@@ -36,6 +38,10 @@ public static class DependencyInjection
         // ── Tầng Api ──────────────────────────────────────────────────────────────
         services.AddHttpContextAccessor();                          // Singleton (do framework đăng ký)
         services.AddScoped<ICurrentUser, CurrentUser>();             // Scoped: đọc HttpContext của request hiện tại
+
+        // ── Lưu ẢNH SẢN PHẨM do nhân viên upload (ghi vào wwwroot của web API) ────
+        // Singleton: chỉ đọc cấu hình + thư mục web, không giữ trạng thái theo request.
+        services.AddSingleton<IProductImageStorage, ProductImageStorage>();
 
         // ── Exception handling theo chuẩn .NET 8: IExceptionHandler + ProblemDetails ──
         // (MIDDLEWARE_AND_ERROR_HANDLING.md mục 2)

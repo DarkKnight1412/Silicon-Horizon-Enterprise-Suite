@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" width="320" height="220" role="img" aria-label="PC build sẵn">
+  <!-- Bo mạch chủ trong thùng máy -->
+  <defs>
+    <linearGradient id="case" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e293b" />
+      <stop offset="1" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#38bdf8" stop-opacity="0.35" />
+      <stop offset="1" stop-color="#6366f1" stop-opacity="0.12" />
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="320" height="220" fill="#020617" />
+
+  <!-- Thùng máy (case) -->
+  <rect x="76" y="24" width="168" height="172" rx="10" fill="url(#case)" stroke="#334155" stroke-width="2" />
+  <rect x="88" y="36" width="144" height="148" rx="6" fill="url(#glass)" />
+
+  <!-- Bo mạch chủ -->
+  <rect x="100" y="52" width="86" height="96" rx="4" fill="#0b1220" stroke="#475569" />
+  <!-- CPU + tản nhiệt -->
+  <rect x="112" y="64" width="34" height="34" rx="3" fill="#64748b" />
+  <g stroke="#94a3b8" stroke-width="2">
+    <line x1="115" y1="70" x2="143" y2="70" />
+    <line x1="115" y1="78" x2="143" y2="78" />
+    <line x1="115" y1="86" x2="143" y2="86" />
+    <line x1="115" y1="94" x2="143" y2="94" />
+  </g>
+  <!-- Khe RAM -->
+  <g fill="#0ea5e9">
+    <rect x="156" y="64" width="8" height="60" rx="2" />
+    <rect x="168" y="64" width="8" height="60" rx="2" />
+  </g>
+  <!-- Khe card đồ hoạ -->
+  <rect x="104" y="112" width="78" height="8" rx="2" fill="#334155" />
+  <rect x="104" y="128" width="78" height="10" rx="2" fill="#1e293b" stroke="#475569" />
+
+  <!-- Nguồn (PSU) -->
+  <rect x="200" y="132" width="26" height="44" rx="4" fill="#0f172a" stroke="#475569" />
+  <circle cx="213" cy="154" r="7" fill="#1e293b" stroke="#64748b" />
+
+  <!-- Ổ cứng / SSD -->
+  <rect x="200" y="52" width="26" height="52" rx="4" fill="#0b1220" stroke="#475569" />
+  <g fill="#22c55e">
+    <circle cx="207" cy="62" r="2" />
+    <circle cx="207" cy="72" r="2" />
+  </g>
+
+  <!-- Quạt mặt trước -->
+  <g stroke="#38bdf8" fill="none" stroke-width="3">
+    <circle cx="104" cy="168" r="14" />
+    <path d="M104 154 A14 14 0 0 1 118 168" />
+  </g>
+
+  <!-- Đế / chân máy -->
+  <rect x="70" y="196" width="180" height="8" rx="4" fill="#1e293b" />
+</svg>

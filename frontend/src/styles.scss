@@ -21,6 +21,21 @@ body {
   background-color: #f1f5f9;
 }
 
+/* -----------------------------------------------------------------------------
+   NỀN TỐI cho các khu vực giao diện tối (web khách hàng + trang đăng nhập/đăng ký).
+   Nền của thẻ `html` chính là nền được vẽ cho TOÀN BỘ canvas của trang — kể cả vùng "kéo quá"
+   đầu/cuối (overscroll) và khoảng trống khi nội dung ngắn hơn khung nhìn. Vì vậy CHỈ đặt màu nền
+   cho layout (`bg-slate-950`) là KHÔNG đủ: khi cuộn hết lên trên/xuống dưới sẽ lộ một vệt sáng
+   của `#f1f5f9` ở mép trang.
+   Các layout tối gắn directive `shDarkCanvas` (shared/directives/dark-canvas.directive.ts) để
+   thêm/gỡ class này ⇒ khu vực quản trị (tông sáng) giữ nguyên như trước.
+   ----------------------------------------------------------------------------- */
+html.sh-dark,
+html.sh-dark body {
+  background-color: #020617; /* slate-950 */
+  color-scheme: dark; /* thanh cuộn + vùng overscroll của trình duyệt dùng tông tối */
+}
+
 /* Thanh cuộn gọn cho các bảng danh sách dài */
 * {
   scrollbar-width: thin;

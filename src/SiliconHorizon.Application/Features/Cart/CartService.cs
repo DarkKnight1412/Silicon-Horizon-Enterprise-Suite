@@ -1,3 +1,4 @@
+using System.Text.Json;
 using SiliconHorizon.Application.Abstractions.Data;
 using SiliconHorizon.Application.Abstractions.Security;
 using SiliconHorizon.Application.Common.Exceptions;
@@ -16,8 +17,8 @@ namespace SiliconHorizon.Application.Features.Cart;
 /// </remarks>
 public sealed class CartService : ICartService
 {
-    /// <summary><c>@SessionToken</c> của proc là <c>varchar(64)</c> — chặn sớm để trả 400 thay vì lỗi hệ thống khi tràn cột.</summary>
-    private const int SessionTokenMaxLength = 64;
+    /// <summary>JSON camelCase đúng như proc đọc bằng <c>OPENJSON</c> (productId · quantity).</summary>
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly ISqlExecutor _sqlExecutor;
     private readonly ICurrentUser _currentUser;
@@ -144,44 +145,57 @@ public sealed class CartService : ICartService
             cancellationToken);
     }
 
+    public async Task<AddedCartItemsResultDto> AddItemsAsync(
+        AddCartItemsRequest request,
+        string? sessionToken,
+        CancellationToken cancellationToken = default)
+    {
+        if (request.Items.Count == 0)
+        {
+            throw new BadRequestException("Cần ít nhất một sản phẩm để thêm vào giỏ hàng.");
+        }
+
+        var owner = ResolveOwner(sessionToken);
+        var itemsJson = JsonSerializer.Serialize(
+            request.Items.Select(item => new { productId = item.ProductId, quantity = item.Quantity }),
+            JsonOptions);
+
+        // Proc thêm TẤT CẢ trong một giao dịch: dòng nào ngừng bán (50001) hoặc vượt tồn (50003)
+        // thì KHÔNG thêm gì cả ⇒ giỏ hàng không bao giờ ở trạng thái nửa vời.
+        var rows = await _sqlExecutor.QueryAsync<AddedCartItemsRow>(
+            StoredProcedureNames.CartAddItems,
+            new { owner.CustomerId, owner.SessionToken, ItemsJson = itemsJson },
+            cancellationToken);
+
+        if (rows.Count == 0)
+        {
+            throw new ConflictException("Không thêm được sản phẩm vào giỏ hàng.", "CART-ADD-ITEMS-FAILED");
+        }
+
+        return new AddedCartItemsResultDto
+        {
+            ItemCount = rows.Count,
+            Items = rows.Select(row => new AddedCartItemDetailDto
+            {
+                ProductId = row.ProductId,
+                Name = row.Name,
+                AddedQuantity = row.AddedQuantity,
+                CartQuantity = row.CartQuantity
+            }).ToList()
+        };
+    }
+
     /// <summary>
-    /// Xác định chủ giỏ hàng. Ưu tiên khách đã đăng nhập (<c>CustomerId</c> từ token — API ép, không tin client),
-    /// ngược lại dùng sessionToken của khách vãng lai; thiếu cả hai → 400.
+    /// Xác định chủ giỏ hàng — uỷ quyền cho <see cref="CartOwnerResolver"/> để quy tắc bảo mật
+    /// (customerId ÉP từ token · mã phiên vãng lai ở header X-Cart-Session) chỉ tồn tại ở MỘT nơi,
+    /// dùng chung với các use case khác cũng ghi vào giỏ (ví dụ thêm cả bộ PC build sẵn).
     /// </summary>
     private CartOwner ResolveOwner(string? sessionToken)
-    {
-        if (_currentUser.CustomerId is { } customerId)
-        {
-            // Giỏ theo tài khoản: không truyền sessionToken để proc không tra nhầm giỏ vãng lai.
-            return new CartOwner(customerId, null);
-        }
+        => CartOwnerResolver.Resolve(_currentUser, sessionToken);
 
-        var token = NormalizeSessionToken(sessionToken)
-            ?? throw new BadRequestException(
-                "Thiếu thông tin chủ giỏ hàng: cần đăng nhập hoặc gửi mã phiên khách vãng lai qua header X-Cart-Session.");
-
-        return new CartOwner(null, token);
-    }
-
-    /// <summary>
-    /// Chuẩn hóa sessionToken khách vãng lai: rỗng → <c>null</c>; dài quá <c>varchar(64)</c> của proc → 400.
-    /// </summary>
+    /// <summary>Chuẩn hóa mã phiên khách vãng lai (uỷ quyền cho <see cref="CartOwnerResolver"/>).</summary>
     private static string? NormalizeSessionToken(string? sessionToken)
-    {
-        var token = sessionToken?.Trim();
-
-        if (string.IsNullOrEmpty(token))
-        {
-            return null;
-        }
-
-        if (token.Length > SessionTokenMaxLength)
-        {
-            throw new BadRequestException($"Mã phiên khách vãng lai tối đa {SessionTokenMaxLength} ký tự.");
-        }
-
-        return token;
-    }
+        => CartOwnerResolver.NormalizeSessionToken(sessionToken);
 
     private static CartItemDto ToItemDto(CartItemRow row) => new()
     {
@@ -219,7 +233,4 @@ public sealed class CartService : ICartService
         OldQuantity = row.OldQuantity,
         NewQuantity = row.NewQuantity
     };
-
-    /// <summary>Bộ đôi nhận dạng chủ giỏ — đúng một trong hai có giá trị, giá trị còn lại là <c>NULL</c>.</summary>
-    private sealed record CartOwner(long? CustomerId, string? SessionToken);
 }

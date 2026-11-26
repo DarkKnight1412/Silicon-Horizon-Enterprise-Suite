@@ -29,6 +29,13 @@ export const LANDING_ROUTES: Routes = [
     data: { title: 'Mua sắm' },
   },
   {
+    // PC BUILD SẴN đã được gộp vào /shop dưới dạng tab chế độ ("Mua linh kiện" | "Mua theo PC build sẵn")
+    // nên KHÔNG còn trang riêng. Giữ chuyển hướng để link/bookmark cũ không bị 404.
+    path: 'pc-builds',
+    redirectTo: '/shop',
+    pathMatch: 'prefix',
+  },
+  {
     // Giỏ hàng: khách VÃNG LAI vẫn dùng được (biên lai giỏ giữ theo mã phiên X-Cart-Session).
     path: 'cart',
     loadChildren: () => import('../cart/cart.routes').then((m) => m.CART_ROUTES),

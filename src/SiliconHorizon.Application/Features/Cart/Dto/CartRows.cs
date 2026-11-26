@@ -75,3 +75,18 @@ public class AddedCartItemRow
     /// <summary>Số lượng sau khi cộng dồn hoặc thay thế.</summary>
     public int Quantity { get; set; }
 }
+
+/// <summary>Result set của <c>usp_Cart_AddItems</c> (thêm nhiều dòng) — từng sản phẩm đã vào giỏ.</summary>
+public class AddedCartItemsRow
+{
+    public long ProductId { get; set; }
+
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>Số lượng vừa thêm.</summary>
+    public int AddedQuantity { get; set; }
+
+    /// <summary>Số lượng hiện có trong giỏ sau khi thêm.</summary>
+    public int CartQuantity { get; set; }
+}
+

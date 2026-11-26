@@ -82,4 +82,19 @@ export class AdminApi {
       },
     });
   }
+
+  /**
+   * POST /api/v1/admin/products/images — upload MỘT ảnh sản phẩm (multipart/form-data: `sku` + `file`).
+   *
+   * Trả URL **đầy đủ** của ảnh trên API (VD `http://localhost:5270/images/products/...jpg`) để client ghi
+   * vào `ProductImages.Url` khi lưu sản phẩm. Nhờ vậy ảnh KHÔNG phải nằm trong mã nguồn web khách hàng —
+   * thêm/sửa ảnh không cần build lại FE (Database/README.md mục 3.3).
+   */
+  uploadProductImage(sku: string, file: File): Observable<{ url: string }> {
+    const form = new FormData();
+    form.append('sku', sku);
+    form.append('file', file);
+
+    return this.api.post<{ url: string }>('/v1/admin/products/images', form);
+  }
 }

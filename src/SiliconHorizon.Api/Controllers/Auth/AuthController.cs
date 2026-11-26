@@ -47,6 +47,19 @@ public class AuthController : ControllerBase
         CancellationToken cancellationToken)
         => Ok(await _authService.LoginAsync(request, cancellationToken));
 
+    /// <summary>
+    /// POST /api/auth/google — đăng nhập bằng Google (ID token do Google Identity Services trả về).
+    /// Xác minh token rồi phát JWT của hệ thống; email chưa có tài khoản ⇒ tạo tài khoản KHÁCH HÀNG.
+    /// </summary>
+    [HttpPost("google")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(AuthTokensDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<AuthTokensDto>> LoginWithGoogle(
+        [FromBody] GoogleLoginRequest request,
+        CancellationToken cancellationToken)
+        => Ok(await _authService.LoginWithGoogleAsync(request, cancellationToken));
+
     /// <summary>POST /api/auth/refresh — đổi refresh token lấy cặp token mới.</summary>
     [HttpPost("refresh")]
     [AllowAnonymous]

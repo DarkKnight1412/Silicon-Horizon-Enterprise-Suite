@@ -2,18 +2,22 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthStore } from '../../core/auth/auth.store';
 import { CartStore } from '../../core/services/cart.store';
+import { DarkCanvasDirective } from '../../shared/directives/dark-canvas.directive';
 
 /**
  * Khung CÔNG KHAI (landing) cho các trang KHÔNG cần đăng nhập:
- * Trang chủ · Mua sắm · Về chúng tôi · Định hướng phát triển.
+ * Trang chủ · Mua sắm (gồm cả chế độ "Mua theo PC build sẵn") · Về chúng tôi · Định hướng phát triển.
  *
  * Bố cục: thanh điều hướng NGANG cố định ở trên cùng (thương hiệu + các tiêu đề + nút "Đăng nhập"),
  * phía dưới là vùng nội dung theo route (`<router-outlet/>`) và chân trang.
  * Nút "Đăng nhập" trỏ sang khung xác thực `/login` (AuthLayout) — vẫn dùng lại nguyên luồng đăng nhập.
+ *
+ * Lưu ý: mua theo BỘ PC DỰNG SẴN không còn là tab riêng — nằm trong `/shop` dưới dạng tab chọn chế độ
+ * ("Mua linh kiện" | "Mua theo PC build sẵn") để khách chỉ cần ở MỘT màn hình mua sắm.
  */
 @Component({
   selector: 'app-public-layout',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, DarkCanvasDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './public-layout.html',
 })

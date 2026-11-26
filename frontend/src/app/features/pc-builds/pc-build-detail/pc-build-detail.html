@@ -1,0 +1,293 @@
+@let item = build();
+
+<!-- ===== 1. Đường dẫn + hạng + tên bộ ===== -->
+<section class="border-b border-white/10 bg-slate-950 px-4 py-6 sm:px-6">
+  <div class="mx-auto max-w-6xl">
+    <nav class="flex flex-wrap items-center gap-1 text-sm text-slate-400">
+      <a routerLink="/" class="hover:text-brand-300">Trang chủ</a>
+      <span>/</span>
+      <a routerLink="/pc-builds" class="hover:text-brand-300">PC build sẵn</a>
+      <span>/</span>
+      <span class="font-mono text-slate-300">{{ item.code }}</span>
+    </nav>
+
+    <div class="mt-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold" [class]="tierClass()">
+          {{ tierLabel() }}
+        </span>
+
+        @if (item.isFeatured) {
+          <span class="rounded-full bg-brand-600 px-2.5 py-0.5 text-[11px] font-semibold text-white">
+            Nổi bật
+          </span>
+        }
+
+        <span
+          class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+          [class]="
+            item.availableBuilds > 0
+              ? 'bg-emerald-500/15 text-emerald-300'
+              : 'bg-rose-500/15 text-rose-300'
+          "
+        >
+          @if (item.availableBuilds > 0) {
+            Sẵn sàng lắp: {{ item.availableBuilds }} bộ
+          } @else {
+            Tạm hết linh kiện
+          }
+        </span>
+      </div>
+
+      <h1 class="mt-2 text-2xl font-bold text-white sm:text-3xl">{{ item.name }}</h1>
+
+      @if (item.summary) {
+        <p class="mt-1 max-w-3xl text-sm text-slate-400">{{ item.summary }}</p>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- ===== 2. Ảnh bộ máy + thông tin mua ===== -->
+<section class="bg-slate-950 px-4 py-8 sm:px-6">
+  <div class="mx-auto grid max-w-6xl gap-6 lg:grid-cols-3">
+    <div class="overflow-hidden rounded-xl border border-white/10 bg-slate-900/60">
+      @if (item.imageUrl) {
+        <img class="h-72 w-full object-cover" [src]="item.imageUrl" [alt]="item.name" />
+      } @else {
+        <div class="grid h-72 place-items-center text-5xl" aria-hidden="true">🖥️</div>
+      }
+    </div>
+
+    <div class="rounded-xl border border-white/10 bg-slate-900/60 p-4 lg:col-span-2">
+      <dl class="grid gap-2 text-sm sm:grid-cols-2">
+        <div class="flex justify-between gap-2 rounded bg-white/5 px-3 py-2">
+          <dt class="text-slate-400">Mã bộ</dt>
+          <dd class="font-mono font-medium text-slate-100">{{ item.code }}</dd>
+        </div>
+        <div class="flex justify-between gap-2 rounded bg-white/5 px-3 py-2">
+          <dt class="text-slate-400">Số linh kiện</dt>
+          <dd class="font-medium text-slate-100">{{ item.componentCount }}</dd>
+        </div>
+        <div class="flex justify-between gap-2 rounded bg-white/5 px-3 py-2">
+          <dt class="text-slate-400">Bộ lắp được ngay</dt>
+          <dd
+            class="font-medium"
+            [class]="item.availableBuilds > 0 ? 'text-emerald-300' : 'text-rose-300'"
+          >
+            {{ item.availableBuilds }}
+          </dd>
+        </div>
+        <div class="flex justify-between gap-2 rounded bg-white/5 px-3 py-2">
+          <dt class="text-slate-400">Bảo hành</dt>
+          <dd class="font-medium text-slate-100">Theo từng linh kiện</dd>
+        </div>
+      </dl>
+
+      <!-- Giá bộ = tổng giá linh kiện ⇒ không phát sinh chênh lệch khi thêm vào giỏ -->
+      <div class="mt-4">
+        <p class="text-2xl font-semibold text-brand-300">{{ formatPrice(item.partsPrice) }}</p>
+        <p class="mt-0.5 text-xs text-slate-400">
+          Giá bộ = tổng giá {{ item.componentCount }} linh kiện (đã áp bảng giá và khuyến mãi hiện hành)
+        </p>
+      </div>
+
+      @if (maxQuantity() <= 0) {
+        <p class="mt-4 rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+          Bộ này đang thiếu hàng ở một linh kiện nên chưa thêm vào giỏ được. Vui lòng chọn bộ khác hoặc
+          liên hệ cửa hàng để được tư vấn.
+        </p>
+      } @else if (shortComponents().length > 0) {
+        <p class="mt-4 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+          Số bộ bạn chọn vượt tồn của
+          <strong class="font-semibold">{{ shortComponents().length }} linh kiện</strong>. Hãy giảm số bộ
+          hoặc xem tồn chi tiết ở bảng linh kiện bên dưới.
+        </p>
+      }
+
+      <div class="mt-5 flex flex-wrap items-center gap-3">
+        <div class="flex items-center rounded-md border border-white/20">
+          <button
+            type="button"
+            class="px-3 py-2 text-lg leading-none text-slate-200 transition hover:text-white"
+            aria-label="Giảm số bộ"
+            (click)="changeQuantity(-1)"
+          >
+            −
+          </button>
+          <input
+            class="w-16 border-x border-white/15 bg-slate-950 py-2 text-center text-sm text-slate-100"
+            type="number"
+            min="1"
+            [max]="maxQuantity()"
+            [value]="quantity()"
+            aria-label="Số bộ cần mua"
+            (input)="onQuantityInput($event)"
+          />
+          <button
+            type="button"
+            class="px-3 py-2 text-lg leading-none text-slate-200 transition hover:text-white"
+            aria-label="Tăng số bộ"
+            (click)="changeQuantity(1)"
+          >
+            +
+          </button>
+        </div>
+
+        <button
+          type="button"
+          class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+          [disabled]="!canAdd()"
+          (click)="addToCart()"
+        >
+          {{ adding() ? 'Đang thêm…' : 'Thêm vào giỏ' }}
+        </button>
+
+        <button
+          type="button"
+          class="rounded-md border border-white/20 px-4 py-2 text-sm text-slate-100 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+          [disabled]="!canAdd()"
+          (click)="buyNow()"
+        >
+          Mua ngay
+        </button>
+
+        <p class="text-sm text-slate-400">
+          Tạm tính:
+          <span class="font-semibold text-slate-100">{{ formatPrice(totalPrice()) }}</span>
+          · {{ totalUnits() }} linh kiện sẽ vào giỏ
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 3. Linh kiện trong bộ (bảng chi tiết) ===== -->
+<section class="bg-slate-950 px-4 pb-8 sm:px-6">
+  <div class="mx-auto max-w-6xl">
+    <div class="overflow-hidden rounded-xl border border-white/10 bg-slate-900/60">
+      <header class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
+        <h2 class="text-base font-semibold text-white">Linh kiện trong bộ ({{ item.componentCount }})</h2>
+        <p class="text-xs text-slate-400">
+          Thêm cả bộ vào giỏ ⇒ mỗi linh kiện trở thành một dòng trong giỏ hàng
+        </p>
+      </header>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-white/5 text-left text-xs uppercase tracking-wide text-slate-400">
+            <tr>
+              <th class="px-4 py-2 font-medium">#</th>
+              <th class="px-4 py-2 font-medium">Linh kiện</th>
+              <th class="px-4 py-2 font-medium">Nhóm</th>
+              <th class="px-4 py-2 text-right font-medium">SL</th>
+              <th class="px-4 py-2 text-right font-medium">Đơn giá</th>
+              <th class="px-4 py-2 text-right font-medium">Thành tiền</th>
+              <th class="px-4 py-2 font-medium">Tồn kho</th>
+              <th class="px-4 py-2 font-medium">Bảo hành</th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y divide-white/5">
+            @for (component of item.components; track component.productId; let index = $index) {
+              <tr class="align-top">
+                <td class="px-4 py-3 text-slate-500">{{ index + 1 }}</td>
+                <td class="px-4 py-3">
+                  <a
+                    class="font-medium text-slate-100 transition hover:text-brand-300"
+                    [routerLink]="['/catalog/products', component.productId]"
+                  >
+                    {{ component.name }}
+                  </a>
+                  <p class="font-mono text-[11px] text-slate-500">
+                    {{ component.sku }} · {{ component.brandName }}
+                  </p>
+                  @if (component.note) {
+                    <p class="mt-0.5 text-[11px] text-slate-400">{{ component.note }}</p>
+                  }
+                </td>
+                <td class="px-4 py-3 text-slate-300">{{ component.categoryName }}</td>
+                <td class="px-4 py-3 text-right text-slate-100">{{ component.quantity }}</td>
+                <td class="px-4 py-3 text-right text-slate-100">{{ formatPrice(component.unitPrice) }}</td>
+                <td class="px-4 py-3 text-right font-medium text-slate-100">
+                  {{ formatPrice(component.lineTotal) }}
+                </td>
+                <td class="px-4 py-3">
+                  <span
+                    class="inline-block rounded-full px-2 py-0.5 text-[11px] font-medium"
+                    [class]="componentStockClass(component)"
+                  >
+                    {{ componentStockLabel(component) }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-slate-300">{{ component.warrantyMonths }} tháng</td>
+              </tr>
+            }
+          </tbody>
+
+          <tfoot class="border-t border-white/10 bg-white/5">
+            <tr>
+              <td class="px-4 py-3 text-xs text-slate-400" colspan="5">
+                Tổng giá linh kiện (cũng chính là giá bộ)
+              </td>
+              <td class="px-4 py-3 text-right text-base font-semibold text-brand-300">
+                {{ formatPrice(item.partsPrice) }}
+              </td>
+              <td class="px-4 py-3 text-xs text-slate-400" colspan="2">
+                Còn lắp được {{ item.availableBuilds }} bộ
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 4. Mô tả + lưu ý khi mua theo bộ ===== -->
+<section class="bg-slate-950 px-4 pb-12 sm:px-6">
+  <div class="mx-auto grid max-w-6xl gap-6 lg:grid-cols-3">
+    <div class="rounded-xl border border-white/10 bg-slate-900/60 p-4 lg:col-span-2">
+      <h2 class="text-base font-semibold text-white">Về bộ máy này</h2>
+
+      @if (item.description) {
+        <p class="mt-2 text-sm leading-relaxed text-slate-300">{{ item.description }}</p>
+      }
+
+      @if (item.summary) {
+        <p class="mt-3 rounded-md bg-white/5 px-3 py-2 text-sm text-slate-300">
+          <span class="font-semibold text-slate-100">Cấu hình chính:</span> {{ item.summary }}
+        </p>
+      }
+    </div>
+
+    <aside class="rounded-xl border border-white/10 bg-slate-900/60 p-4">
+      <h2 class="text-base font-semibold text-white">Lưu ý khi mua theo bộ</h2>
+
+      <ul class="mt-3 space-y-2 text-sm text-slate-300">
+        <li>
+          • Thêm cả bộ vào giỏ ⇒ giỏ hàng có <strong class="text-slate-100">{{ item.componentCount }} dòng</strong>,
+          mỗi dòng là một linh kiện (vẫn có thể bỏ bớt món không cần trước khi đặt hàng).
+        </li>
+        <li>• Giá bộ = tổng giá linh kiện; khuyến mãi của linh kiện nào được áp luôn cho linh kiện đó.</li>
+        <li>• Bảo hành theo từng linh kiện, không phải bảo hành gộp cả máy.</li>
+        <li>• Bộ chưa gồm card đồ hoạ rời và hệ điều hành (cần thì chọn thêm ở trang Mua sắm).</li>
+      </ul>
+
+      <div class="mt-4 flex flex-col gap-2">
+        <a
+          routerLink="/pc-builds"
+          class="rounded-md border border-white/20 px-3 py-2 text-center text-sm text-slate-100 transition hover:bg-white/10"
+        >
+          ← Xem các bộ khác
+        </a>
+        <a
+          routerLink="/shop"
+          class="rounded-md border border-white/20 px-3 py-2 text-center text-sm text-slate-100 transition hover:bg-white/10"
+        >
+          Mua linh kiện lẻ
+        </a>
+      </div>
+    </aside>
+  </div>
+</section>

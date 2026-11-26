@@ -47,6 +47,9 @@ public static class DependencyInjection
         // Tiện ích dùng chung.
         services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
 
+        // Xác minh ID token Google cho "Đăng nhập bằng Google" (đọc Google:ClientId trong cấu hình).
+        services.AddSingleton<IGoogleTokenValidator, GoogleIdTokenValidator>();
+
         // ── Xác thực (AUTHENTICATION_AND_AUTHORIZATION.md) ─────────────────────
         // Singleton: hai service dưới đây không giữ trạng thái, chỉ đọc cấu hình JwtOptions.
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();

@@ -53,3 +53,9 @@ public class CurrentAccountDto
 
 /// <summary>Kết quả đăng ký khách hàng mới.</summary>
 public record RegisteredCustomerDto(long UserId, long CustomerId);
+
+/// <summary>
+/// POST /api/auth/google — ID token do Google Identity Services trả về cho trình duyệt
+/// (trường <c>credential</c> trong callback). API xác minh rồi tự phát JWT của hệ thống.
+/// </summary>
+public record GoogleLoginRequest(string IdToken);

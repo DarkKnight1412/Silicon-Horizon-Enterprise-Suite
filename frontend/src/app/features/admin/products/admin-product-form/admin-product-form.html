@@ -333,15 +333,24 @@
           </button>
         </div>
 
+        <p class="mt-2 text-xs text-slate-500">
+          Quy ước: đặt file trong <code>frontend/public/images/products/</code>, tên = <strong>mã SKU viết
+          thường</strong> (VD <code>cpu-intel-i9-14900k.jpg</code>) ⇒ đường dẫn
+          <code>/images/products/&lt;sku&gt;.jpg</code>. Bấm “Theo SKU” để tự điền.
+        </p>
+
         @if (images.length === 0) {
           <p class="mt-2 text-sm text-slate-500">Chưa có ảnh nào.</p>
         } @else {
           <div class="mt-3 space-y-2">
             @for (group of images.controls; track $index) {
-              <div class="grid gap-2 sm:grid-cols-[1fr_8rem_8rem_auto]" [formGroup]="imageGroupAt($index)">
+              <div
+                class="grid gap-2 sm:grid-cols-[1fr_6rem_7rem_auto_auto]"
+                [formGroup]="imageGroupAt($index)"
+              >
                 <input
-                  type="url"
-                  placeholder="https://..."
+                  type="text"
+                  placeholder="/images/products/ten-anh.jpg"
                   formControlName="url"
                   class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                 />
@@ -357,11 +366,40 @@
                 </label>
                 <button
                   type="button"
+                  class="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  title="Tự điền đường dẫn theo mã SKU (quy ước /images/products/...)"
+                  (click)="applyImageConvention($index)"
+                >
+                  Theo SKU
+                </button>
+                <button
+                  type="button"
                   class="rounded-md px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50"
                   (click)="removeImage($index)"
                 >
                   Xoá
                 </button>
+              </div>
+
+              <!-- Upload ảnh từ máy của nhân viên + xem trước (ảnh lưu ở API, không cần build lại web) -->
+              <div class="mt-1 flex flex-wrap items-center gap-3">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  class="text-xs text-slate-600"
+                  [disabled]="uploadingIndex() === $index"
+                  (change)="uploadImage($index, $event)"
+                />
+
+                @if (uploadingIndex() === $index) {
+                  <span class="text-xs text-slate-500">Đang tải ảnh lên…</span>
+                } @else if (group.controls.url.value) {
+                  <img
+                    [src]="group.controls.url.value"
+                    alt="Xem trước ảnh sản phẩm"
+                    class="h-12 w-12 rounded border border-slate-200 object-cover"
+                  />
+                }
               </div>
             }
           </div>

@@ -20,6 +20,12 @@ export interface Environment {
   defaultPageSize: number;
   /** Thời gian tự ẩn của toast (ms). */
   toastTimeoutMs: number;
+  /**
+   * Client ID của Google (OAuth client loại "Web application") cho nút "Đăng nhập bằng Google".
+   * Để TRỐNG ⇒ ẩn nút Google. Giá trị này phải trùng `Google:ClientId` ở backend (API dùng để xác minh
+   * ID token) và phải khai `Authorized JavaScript origins` trong Google Cloud Console.
+   */
+  googleClientId?: string;
 }
 
 export const environment: Environment = {
@@ -28,4 +34,5 @@ export const environment: Environment = {
   apiPathPrefix: '/api',
   defaultPageSize: 12,
   toastTimeoutMs: 5000,
+  googleClientId: '484284223179-aq8i527rtnso34qr065oahcnd88u9jdo.apps.googleusercontent.com',
 };

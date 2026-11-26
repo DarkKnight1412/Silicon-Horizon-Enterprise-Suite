@@ -67,6 +67,19 @@ public static class StoredProcedureNames
 
     public const string CartMerge = "dbo.usp_Cart_Merge";
 
+    /// <summary>Thêm NHIỀU sản phẩm trong một giao dịch — dùng cho tab "Tự build PC".</summary>
+    public const string CartAddItems = "dbo.usp_Cart_AddItems";
+
+    // ── PC build sẵn (combo linh kiện) (Database/10_pc_builds.sql) ───────────
+    public const string PcBuildSearch = "dbo.usp_PcBuild_Search";
+
+    public const string PcBuildGetById = "dbo.usp_PcBuild_GetById";
+
+    public const string PcBuildAddToCart = "dbo.usp_PcBuild_AddToCart";
+
+    /// <summary>Danh mục linh kiện + thông số cho tab "TỰ BUILD PC" (khách tự chọn từng món).</summary>
+    public const string PcBuildBuilderCatalog = "dbo.usp_PcBuild_BuilderCatalog";
+
     // ── Đơn hàng (Database/03_sp_orders_payments.sql) ───────────────────────
     public const string OrderCreate = "dbo.usp_Order_Create";
 

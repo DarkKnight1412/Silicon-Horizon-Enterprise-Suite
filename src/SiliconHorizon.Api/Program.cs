@@ -44,6 +44,11 @@ if (!app.Environment.IsDevelopment())
 // 6) CORS phải trước authentication và trước endpoints.
 app.UseCors(CorsPolicyNames.CustomerWeb);
 
+// 6.1) File tĩnh: phục vụ ẢNH SẢN PHẨM do nhân viên upload (`wwwroot/images/products/...`).
+//      Ảnh nằm ở phía API nên KHÔNG cần build lại web khách hàng khi thêm/sửa ảnh
+//      (Database/README.md mục 3.3).
+app.UseStaticFiles();
+
 // 7) Xác thực & phân quyền theo RBAC (BRD 2.2) — phải đúng thứ tự: authentication trước authorization.
 app.UseAuthentication();
 app.UseAuthorization();

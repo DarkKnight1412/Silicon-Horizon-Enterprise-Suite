@@ -10,6 +10,13 @@ public interface IAuthService
 {
     Task<AuthTokensDto> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Đăng nhập bằng Google: xác minh ID token, tìm/khởi tạo tài khoản KHÁCH HÀNG theo email rồi phát JWT.
+    /// </summary>
+    Task<AuthTokensDto> LoginWithGoogleAsync(
+        GoogleLoginRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<RegisteredCustomerDto> RegisterCustomerAsync(
         RegisterCustomerRequest request,
         CancellationToken cancellationToken = default);

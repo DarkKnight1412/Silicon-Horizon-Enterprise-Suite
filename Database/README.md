@@ -12,8 +12,11 @@ Tài liệu này liệt kê các API cần có cho dữ liệu hiện tại (64 
 | 4 | `04_sp_inventory_suppliers.sql` | Kho, nhập hàng, chuyển kho, kiểm kê, serial, nhà cung cấp |
 | 5 | `05_sp_warranty_returns_commission.sql` | Bảo hành, đổi trả, hoa hồng |
 | 6 | `06_sp_hr_audit_reports.sql` | Chấm công, nhật ký, báo cáo |
+| 7 | `10_pc_builds.sql` | PC build sẵn: bảng `PcBuilds`/`PcBuildItems` + `usp_PcBuild_Search`/`GetById`/`AddToCart`/`BuilderCatalog` + 5 bộ mẫu |
 
 Cả 5 file proc có thể chạy lại nhiều lần (`CREATE OR ALTER`). Phải chạy đủ 02 đến 06 trước khi dùng, vì proc ở file này gọi proc ở file khác (ví dụ hoàn tất đơn gọi tính hoa hồng).
+
+Riêng `10_pc_builds.sql` **tự tạo bảng** (`IF OBJECT_ID ... IS NULL`) nên chạy được cả trên database **đã có dữ liệu** — nên chạy SAU `09_seed_sample_products.sql` để các bộ mẫu gắn được vào linh kiện mẫu.
 
 ---
 
@@ -110,6 +113,68 @@ Ví dụ `GET /api/products?categoryCode=RAM&specFilters=...`: API chuyển `spe
 | PUT | `/api/admin/products/{id}` | Sửa sản phẩm (không đổi danh mục), ghi Audit nếu đổi giá | AD | `usp_Product_Update` |
 | PATCH | `/api/admin/products/{id}/status` | Đổi trạng thái: nháp, đang bán, ngừng kinh doanh | AD | `usp_Product_SetStatus` |
 | PUT | `/api/admin/products/{id}/prices/{groupId}` | Đặt giá theo nhóm khách (giá dưới vốn cần người duyệt) | AD, QL đề xuất | `usp_ProductPrice_Upsert` |
+| POST | `/api/admin/products/images` | **Upload 1 ảnh sản phẩm** (multipart: `file` ≤ 5 MB jpg/jpeg/png/webp + `sku`) → lưu vào `wwwroot/images/products/`, trả `{ url }` | AD | — (ghi file; không qua proc) |
+
+### 3.3. Quy ước đường dẫn ẢNH sản phẩm
+
+**Ảnh do NHÂN VIÊN upload** (trang `/admin/products`): gọi `POST /api/admin/products/images` (multipart) →
+API lưu file vào `src/SiliconHorizon.Api/wwwroot/images/products/` và phục vụ qua `UseStaticFiles()`
+⇒ **thêm/sửa ảnh KHÔNG cần build lại web khách hàng**. Tên file do API sinh tự động, an toàn:
+`<sku viết thường>-<8 ký tự ngẫu nhiên>.<ext>`.
+
+Bảng `ProductImages.Url` (varchar(500)) chỉ lưu **chuỗi đường dẫn**:
+
+| Loại ảnh | Giá trị lưu ở `ProductImages.Url` | File nằm ở |
+|---|---|---|
+| **Upload qua quản trị** (khuyến nghị) | **URL đầy đủ** trỏ về API — VD `http://localhost:5270/images/products/cpu-intel-i9-14900k-1a2b3c4d.jpg` (nếu deploy sau proxy: cấu hình `Storage:PublicBaseUrl`) | `src/SiliconHorizon.Api/wwwroot/images/products/` (KHÔNG commit — đã có trong `.gitignore`) |
+| Ảnh đặt sẵn trong mã nguồn web | Đường dẫn **tương đối** theo origin web — VD `/images/products/cpu-intel-i9-14900k.jpg` | `frontend/public/images/products/` (tên file = **mã SKU viết thường**) |
+
+| Quy ước chung | Giá trị |
+|---|---|
+| `SortOrder` | 0, 1, 2… theo thứ tự hiển thị |
+| `IsPrimary` | đúng **một** dòng `= 1` cho mỗi sản phẩm (proc lấy ảnh theo `ORDER BY IsPrimary DESC, SortOrder`) |
+| Định dạng cho phép | `jpg`, `jpeg`, `png`, `webp` — tối đa **5 MB**/ảnh |
+
+Quy tắc kèm theo:
+
+1. Form Admin (`/admin/products`) có **input chọn file** cho từng dòng ảnh: chọn ảnh ⇒ gọi API upload ⇒ tự điền URL vào dòng đó (**nhớ bấm Lưu** để ghi vào sản phẩm). Nút **“Theo SKU”** dùng cho trường hợp đặt ảnh sẵn trong mã nguồn web (điền `/images/products/<sku>.<ext>`).
+2. `GET /api/products` chỉ trả **một** `imageUrl` (ảnh chính); `GET /api/products/{id}` trả đủ mảng `images`.
+3. Ô nhập URL ảnh thủ công là `type="text"` (KHÔNG phải `type="url"`) vì đường dẫn tương đối không hợp lệ với kiểm tra URL của trình duyệt. Muốn dùng host ngoài/CDN thì nhập **URL tuyệt đối** (`https://...`).
+4. Ảnh upload là **dữ liệu runtime**: đặt trong `wwwroot` của API và **không commit** vào git (mục tương ứng đã có trong `.gitignore`). Khi triển khai thật cần thư mục lưu bền (hoặc object storage) + sao lưu cùng dữ liệu.
+5. Xoá ảnh trong form chỉ xoá **dòng dữ liệu** (`ProductImages`); **file vật lý trên đĩa chưa được dọn tự động** — việc dọn định kỳ nằm trong danh sách làm tiếp.
+
+> **Việc nên làm tiếp:** dọn file mồ côi (ảnh đã bị xoá khỏi sản phẩm nhưng còn trên đĩa), giới hạn theo vai trò chi tiết hơn, và (khi lên production) chuyển lưu file sang object storage với `Storage:PublicBaseUrl` cấu hình theo domain công khai.
+
+### 3.4. PC build sẵn (combo linh kiện)
+
+Khách KHÔNG có chuyên môn không phải tự chọn từng linh kiện: cửa hàng bán sẵn các **bộ PC đã dựng**
+(bảng `dbo.PcBuilds` + `dbo.PcBuildItems`, script `10_pc_builds.sql`). Khách xem bộ rồi bấm một nút là
+**tất cả linh kiện của bộ vào giỏ** — backend thêm trong MỘT giao dịch và kiểm tra tồn của từng linh kiện.
+
+| Method | Đường dẫn | Mô tả | Quyền | Stored procedure |
+|---|---|---|---|---|
+| GET | `/api/pc-builds` | Danh sách bộ (lọc `tier`, khoảng giá, `inStockOnly`, `featuredOnly`; sắp xếp; phân trang) | Public | `usp_PcBuild_Search` |
+| GET | `/api/pc-builds/{id}` | Chi tiết bộ + danh sách linh kiện kèm giá và tồn hiện tại | Public | `usp_PcBuild_GetById` |
+| POST | `/api/pc-builds/{id}/add-to-cart` | Thêm CẢ BỘ vào giỏ (body `{ "quantity": 1 }`); thiếu tồn ở 1 linh kiện ⇒ 409 và KHÔNG thêm gì | Public | `usp_PcBuild_AddToCart` |
+| GET | `/api/pc-builds/builder/catalog` | **Danh mục TỰ BUILD PC**: 6 nhóm theo thứ tự chọn (bo mạch chủ → CPU → RAM → ổ cứng → nguồn → màn hình) + giá/tồn/ảnh + `specs` để giao diện tự lọc linh kiện phù hợp | Public | `usp_PcBuild_BuilderCatalog` |
+
+Quy tắc quan trọng:
+
+1. **Bộ KHÔNG có giá riêng.** Giá bộ (`partsPrice`) = tổng giá linh kiện theo `fn_ProductPrice`
+   (bảng giá theo nhóm khách + khuyến mãi đang chạy) ⇒ số tiền hiển thị bằng đúng số tiền vào giỏ/đơn hàng.
+   Muốn bán combo RẺ HƠN mua lẻ thì phải bổ sung cơ chế giảm giá ở tầng giỏ/đơn (`CartItems`/`OrderItems`
+   hiện chưa có cột giảm giá).
+2. `availableBuilds` = số bộ còn lắp được = `MIN(tồn khả dụng của linh kiện / số lượng cần)`.
+3. `Tier`: 0 Văn phòng · 1 Gaming · 2 Đồ hoạ/Render · 3 Cao cấp (nhãn tiếng Việt nằm ở FE,
+   `frontend/src/app/core/models/pc-build.model.ts`).
+4. Thêm bộ ⇒ giỏ hàng nhận **mỗi linh kiện một dòng** (vẫn sửa số lượng / bỏ tick / xoá như bình thường);
+   đơn hàng vì thế cũng gồm các dòng linh kiện — đúng với thực tế xuất kho & bảo hành từng món.
+5. Hiện quản lý bộ bằng script SQL; **API quản trị CRUD cho bộ nằm trong danh sách làm tiếp**.
+6. **TỰ BUILD PC** (tab thứ 3 ở `/shop`): khách chọn linh kiện theo thứ tự và giao diện **chỉ gợi ý linh kiện
+   phù hợp** với lựa chọn trước đó, theo đúng 4 quy tắc mà `usp_Compat_Check` cũng kiểm tra:
+   `socket` CPU = socket bo mạch · `memoryType` RAM = chuẩn RAM bo mạch · `ModulesPerKit × số kit ≤ RamSlots` ·
+   `PowerW ≥ TDP CPU × 2 + 150 W` (công thức khuyến nghị của giao diện, chặt hơn quy tắc cảnh báo của proc).
+   Chốt cấu hình ⇒ thêm MỌI linh kiện đã chọn vào giỏ bằng **một giao dịch** — xem `POST /api/cart/items/bulk` (mục 4).
 
 ---
 
@@ -125,6 +190,7 @@ Chủ giỏ: khách đã đăng nhập (`customerId` từ token) hoặc khách v
 | DELETE | `/api/cart/items/{productId}` | Xóa dòng | Public | `usp_Cart_RemoveItem` |
 | POST | `/api/cart/select-all` | Chọn / bỏ chọn tất cả | Public | `usp_Cart_SelectAll` |
 | POST | `/api/cart/merge` | Gộp giỏ tạm vào giỏ tài khoản sau đăng nhập | KH | `usp_Cart_Merge` |
+| POST | `/api/cart/items/bulk` | **Thêm NHIỀU sản phẩm trong MỘT giao dịch** — dùng cho tab "Tự build PC" (`items: [{ productId, quantity }]`); chỉ cần 1 dòng ngừng bán/thiếu tồn ⇒ 404/409 và KHÔNG thêm gì | Public | `usp_Cart_AddItems` |
 
 `usp_Cart_Get` trả 3 result set: dòng giỏ hàng, tổng tiền các dòng được tick, cảnh báo (`OUT_OF_STOCK`, `QUANTITY_REDUCED`).
 
@@ -315,6 +381,7 @@ Các điểm sau là quyết định đơn giản hóa có chủ đích, cần b
 - **Hoàn tiền đổi trả**: hoàn theo mọi dòng đã được Quản lý duyệt, kể cả hàng kiểm tra không đạt (chuyển `Defective`). Nếu muốn từ chối hoàn tiền với hàng lỗi do người dùng, cần thêm bước chỉnh số tiền hoàn trước khi gọi `usp_Return_Refund` (proc đã cho phép truyền `@Amount` thấp hơn số dự kiến).
 - **Trạng thái đơn `PendingPayment` của khách mua tại quầy** không áp dụng: đơn tại quầy luôn vào `Pending`.
 - **Tìm kiếm văn bản** dùng `LIKE`. Khi dữ liệu lớn nên chuyển sang Full-Text Search hoặc dịch vụ tìm kiếm riêng.
+- **PC build sẵn** (`10_pc_builds.sql`): bộ không có giá riêng (giá bộ = tổng giá linh kiện) và **chưa có API quản trị** để tạo/sửa bộ (hiện quản lý bằng script SQL); danh mục cũng chưa có card đồ hoạ rời nên các bộ mẫu dùng CPU có đồ hoạ tích hợp.
 
 ### Thứ tự đề xuất để làm tiếp
 

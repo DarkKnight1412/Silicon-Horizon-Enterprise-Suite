@@ -10,6 +10,7 @@ using SiliconHorizon.Application.Features.Customers;
 using SiliconHorizon.Application.Features.Hr;
 using SiliconHorizon.Application.Features.Inventory;
 using SiliconHorizon.Application.Features.Orders;
+using SiliconHorizon.Application.Features.PcBuilds;
 using SiliconHorizon.Application.Features.Pricing;
 using SiliconHorizon.Application.Features.Reports;
 using SiliconHorizon.Application.Features.Returns;
@@ -34,6 +35,7 @@ public static class DependencyInjection
         services.AddAuthModule();
         services.AddCatalogModule();
         services.AddCartModule();
+        services.AddPcBuildModule();  // bộ PC dựng sẵn — khách thêm cả bộ vào giỏ (usp_PcBuild_*)
         services.AddOrdersModule();
         services.AddInventoryModule();      // kho, nhập/chuyển/kiểm kê, serial, nhà cung cấp
         services.AddWarrantyModule();       // usp_Warranty_* (bảo hành, tra cứu bảo hành theo serial)

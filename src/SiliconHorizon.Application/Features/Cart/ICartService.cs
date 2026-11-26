@@ -42,6 +42,16 @@ public interface ICartService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// POST /api/v1/cart/items/bulk — thêm NHIỀU sản phẩm trong MỘT giao dịch (<c>usp_Cart_AddItems</c>).
+    /// Dùng cho tab "Tự build PC": khách chốt cấu hình ⇒ thêm mọi linh kiện một lần, không sợ thêm nửa chừng.
+    /// Bất kỳ dòng nào ngừng bán hoặc thiếu tồn ⇒ không thêm gì và báo rõ sản phẩm lỗi (404/409).
+    /// </summary>
+    Task<AddedCartItemsResultDto> AddItemsAsync(
+        AddCartItemsRequest request,
+        string? sessionToken,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// POST /api/v1/cart/merge — gộp giỏ tạm vào giỏ tài khoản sau khi đăng nhập (CART-02, <c>usp_Cart_Merge</c>).
     /// Cần đăng nhập và tài khoản phải gắn hồ sơ khách hàng; proc tự cắt số lượng theo tồn khả dụng.
     /// </summary>

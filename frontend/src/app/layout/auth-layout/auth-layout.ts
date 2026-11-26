@@ -1,13 +1,17 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { DarkCanvasDirective } from '../../shared/directives/dark-canvas.directive';
 
 /** Khung cho trang xác thực (đăng nhập / đăng ký): nền tối giản, thẻ căn giữa. */
 @Component({
   selector: 'app-auth-layout',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, DarkCanvasDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-  <div class="grid min-h-screen place-items-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4">
+  <div
+    shDarkCanvas
+    class="grid min-h-dvh place-items-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4"
+  >
     <div class="w-full max-w-md">
       <div class="mb-6 flex flex-col items-center gap-3">
         <img src="/icons/logo.png" alt="Apex Circuit Electronics" class="h-16 w-16" />

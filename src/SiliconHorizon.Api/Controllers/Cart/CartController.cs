@@ -59,6 +59,23 @@ public class CartController : ControllerBase
         => Ok(await _cartService.AddItemAsync(request, sessionToken, cancellationToken));
 
     /// <summary>
+    /// POST /api/v1/cart/items/bulk — thêm NHIỀU sản phẩm vào giỏ trong MỘT giao dịch (usp_Cart_AddItems).
+    /// Dùng cho tab "Tự build PC" ở trang Mua sắm: khách tự chọn cấu hình (bo mạch → CPU → RAM → …) rồi
+    /// bấm "Đặt mua" một lần. Body: <c>{ "items": [{ "productId": 12, "quantity": 1 }, …] }</c>.
+    /// Bất kỳ dòng nào ngừng bán hoặc thiếu tồn ⇒ 400/404/409 và KHÔNG thêm gì cả.
+    /// </summary>
+    [HttpPost("items/bulk")]
+    [ProducesResponseType(typeof(AddedCartItemsResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<AddedCartItemsResultDto>> AddItems(
+        [FromBody] AddCartItemsRequest request,
+        [FromHeader(Name = CartSessionHeader)] string? sessionToken,
+        CancellationToken cancellationToken)
+        => Ok(await _cartService.AddItemsAsync(request, sessionToken, cancellationToken));
+
+    /// <summary>
     /// PATCH /api/v1/cart/items/{productId} — đổi số lượng và/hoặc tick chọn (usp_Cart_UpdateItem).
     /// <c>quantity &lt;= 0</c> thì dòng bị xóa khỏi giỏ; sản phẩm không có trong giỏ → 404;
     /// vượt tồn khả dụng hoặc tick món đã hết hàng → 409.

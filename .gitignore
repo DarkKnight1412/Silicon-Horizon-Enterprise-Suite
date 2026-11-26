@@ -61,3 +61,7 @@ frontend/node_modules/
 frontend/dist/
 frontend/.angular/
 frontend/out-tsc/
+
+# --- Anh san pham do nhan vien upload qua API (du lieu runtime, KHONG commit) ---
+src/SiliconHorizon.Api/wwwroot/images/*
+!src/SiliconHorizon.Api/wwwroot/images/.gitkeep

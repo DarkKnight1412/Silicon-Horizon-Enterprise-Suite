@@ -105,6 +105,19 @@ export class AuthStore {
       );
   }
 
+  /**
+   * POST /api/auth/google — đăng nhập bằng Google (ID token do Google Identity Services trả về).
+   * Xử lý GIỐNG `login()`: API trả cặp token của hệ thống ⇒ nạp ngay hồ sơ /api/me.
+   */
+  loginWithGoogle(idToken: string): Observable<CurrentAccountDto> {
+    return this.api
+      .post<AuthTokensDto>('/auth/google', { idToken }, { skipAuth: true, silent: true })
+      .pipe(
+        tap((tokens) => this.applyTokens(tokens)),
+        switchMap(() => this.loadAccount()),
+      );
+  }
+
   /** POST /api/auth/register — khách tự đăng ký, trả về userId/customerId. */
   register(request: RegisterCustomerRequest): Observable<RegisteredCustomerDto> {
     return this.api.post<RegisteredCustomerDto>('/auth/register', request, {

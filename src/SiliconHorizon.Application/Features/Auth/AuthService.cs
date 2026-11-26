@@ -18,17 +18,20 @@ public sealed class AuthService : IAuthService
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ICurrentUser _currentUser;
+    private readonly IGoogleTokenValidator _googleTokenValidator;
 
     public AuthService(
         ISqlExecutor sqlExecutor,
         IJwtTokenService jwtTokenService,
         IPasswordHasher passwordHasher,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IGoogleTokenValidator googleTokenValidator)
     {
         _sqlExecutor = sqlExecutor;
         _jwtTokenService = jwtTokenService;
         _passwordHasher = passwordHasher;
         _currentUser = currentUser;
+        _googleTokenValidator = googleTokenValidator;
     }
 
     public async Task<AuthTokensDto> LoginAsync(
@@ -54,6 +57,107 @@ public sealed class AuthService : IAuthService
             cancellationToken);
 
         return IssueTokens(account);
+    }
+
+    /// <summary>
+    /// Đăng nhập bằng Google (ID token của Google Identity Services).
+    /// <para>
+    /// Luồng: xác minh ID token → tìm tài khoản theo EMAIL (đã được Google xác minh) → chưa có thì tạo
+    /// tài khoản KHÁCH HÀNG mới (mật khẩu ngẫu nhiên, không dùng để đăng nhập bằng mật khẩu) → phát JWT.
+    /// </para>
+    /// <para>
+    /// An toàn: KHÔNG bao giờ tự cấp vai trò nhân viên/Admin qua đường này; tài khoản đã tồn tại chỉ được
+    /// đăng nhập và giữ NGUYÊN vai trò hiện có.
+    /// </para>
+    /// </summary>
+    public async Task<AuthTokensDto> LoginWithGoogleAsync(
+        GoogleLoginRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.IdToken))
+        {
+            throw new BadRequestException("Thiếu ID token của Google.");
+        }
+
+        var googleUser = await _googleTokenValidator.ValidateAsync(request.IdToken, cancellationToken)
+            ?? throw new UnauthorizedException(
+                "Đăng nhập Google không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.",
+                "AUTH-GOOGLE-INVALID");
+
+        // (1) Email đã có tài khoản (khách hoặc nhân viên) ⇒ đăng nhập luôn, giữ nguyên vai trò.
+        var account = await LoadAccountAsync(googleUser.Email, cancellationToken);
+
+        // (2) Chưa có ⇒ tạo tài khoản KHÁCH HÀNG mới.
+        account ??= await RegisterGoogleCustomerAsync(googleUser, cancellationToken);
+
+        if (!account.User.IsActive)
+        {
+            throw new UnauthorizedException("Tài khoản đã bị khoá.", "AUTH-ACCOUNT-INACTIVE");
+        }
+
+        await _sqlExecutor.ExecuteAsync(
+            StoredProcedureNames.AuthUpdateLastLogin,
+            new { UserId = account.User.Id },
+            cancellationToken);
+
+        return IssueTokens(account);
+    }
+
+    /// <summary>
+    /// Tạo tài khoản khách hàng cho email Google chưa tồn tại (dùng lại <c>usp_Auth_RegisterCustomer</c>).
+    /// Tên đăng nhập lấy từ phần trước '@' của email; nếu đã bị dùng thì thêm hậu tố ngẫu nhiên ngắn
+    /// (khách vẫn đăng nhập bằng Google hoặc bằng email, không cần nhớ tên đăng nhập này).
+    /// </summary>
+    private async Task<AuthAccount> RegisterGoogleCustomerAsync(
+        GoogleUserInfo googleUser,
+        CancellationToken cancellationToken)
+    {
+        var username = BuildUsername(googleUser.Email);
+
+        if (await LoadAccountAsync(username, cancellationToken) is not null)
+        {
+            username = $"{username}-{Guid.NewGuid().ToString("N")[..6]}";
+        }
+
+        var row = await _sqlExecutor.QuerySingleOrDefaultAsync<RegisteredCustomerRow>(
+            StoredProcedureNames.AuthRegisterCustomer,
+            new
+            {
+                Username = username,
+
+                // Mật khẩu ngẫu nhiên: KHÔNG ai biết (không đăng nhập bằng mật khẩu được với tài khoản này).
+                PasswordHash = _passwordHasher.Hash(Guid.NewGuid().ToString("N")),
+                Email = googleUser.Email,
+                Phone = (string?)null,
+                FullName = string.IsNullOrWhiteSpace(googleUser.Name) ? username : googleUser.Name
+            },
+            cancellationToken);
+
+        if (row is null)
+        {
+            throw new ConflictException(
+                "Không tạo được tài khoản khách hàng từ Google.",
+                "AUTH-GOOGLE-PROVISION-FAILED");
+        }
+
+        return await LoadAccountAsync(username, cancellationToken)
+            ?? throw new ConflictException(
+                "Đã tạo tài khoản nhưng không tải lại được hồ sơ.",
+                "AUTH-GOOGLE-PROVISION-FAILED");
+    }
+
+    /// <summary>Lấy phần trước '@' của email và chuẩn hoá thành tên đăng nhập an toàn (≤ 50 ký tự).</summary>
+    private static string BuildUsername(string email)
+    {
+        var atIndex = email.IndexOf('@');
+        var local = atIndex > 0 ? email[..atIndex] : email;
+
+        var sanitized = new string(local
+            .Where(ch => char.IsAsciiLetterOrDigit(ch) || ch is '.' or '_' or '-')
+            .ToArray())
+            .Trim('.', '_', '-');
+
+        return sanitized.Length == 0 ? "khach-google" : sanitized[..Math.Min(sanitized.Length, 50)];
     }
 
     public async Task<RegisteredCustomerDto> RegisterCustomerAsync(

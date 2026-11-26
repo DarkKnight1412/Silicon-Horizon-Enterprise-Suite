@@ -73,6 +73,37 @@ export interface SelectAllCartItemsRequest {
   isSelected: boolean;
 }
 
+/**
+ * POST /api/v1/cart/items/bulk — thêm NHIỀU sản phẩm trong MỘT giao dịch
+ * (dùng cho tab "Tự build PC": khách chốt cấu hình rồi bấm "Đặt mua" một lần).
+ */
+export interface AddCartItemsRequest {
+  items: AddCartItemInput[];
+}
+
+/** Một dòng trong `AddCartItemsRequest`. */
+export interface AddCartItemInput {
+  productId: number;
+  quantity: number;
+}
+
+/** Kết quả thêm nhiều sản phẩm (`AddedCartItemsResultDto`). */
+export interface AddedCartItemsResultDto {
+  itemCount: number;
+  items: AddedCartItemDetailDto[];
+}
+
+/** Một dòng vừa được thêm vào giỏ. */
+export interface AddedCartItemDetailDto {
+  productId: number;
+  name: string;
+  /** Số lượng vừa thêm. */
+  addedQuantity: number;
+  /** Số lượng hiện có trong giỏ sau khi thêm. */
+  cartQuantity: number;
+}
+
+
 /** Nhãn tiếng Việt của mã cảnh báo giỏ hàng. */
 export const CART_WARNING_LABELS: Readonly<Record<string, string>> = {
   OUT_OF_STOCK: 'đã hết hàng nên được bỏ chọn',

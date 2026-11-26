@@ -1,0 +1,299 @@
+<!-- ===== 1. Tiêu đề trang + lối tắt ===== -->
+<section class="border-b border-white/10 bg-slate-950 px-4 py-8 sm:px-6">
+  <div class="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-300">Combo dựng sẵn</p>
+      <h1 class="mt-1 text-2xl font-bold text-white sm:text-3xl">
+        PC build sẵn — mua cả bộ, không cần chọn linh kiện
+      </h1>
+      <p class="mt-2 max-w-2xl text-sm text-slate-400">
+        Bộ máy đã được cửa hàng lắp ráp và cân chỉnh sẵn. Bấm
+        <strong class="font-semibold text-slate-200">Thêm vào giỏ</strong> là toàn bộ linh kiện của bộ tự
+        động vào giỏ hàng — giá bộ bằng đúng tổng giá từng linh kiện, không phát sinh thêm.
+      </p>
+      <p class="mt-2 text-sm text-slate-400">
+        @if (loading()) {
+          Đang tải bộ máy…
+        } @else {
+          {{ result().totalCount }} bộ dựng sẵn
+        }
+      </p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      @if (filtered()) {
+        <button
+          type="button"
+          class="rounded-md border border-white/20 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-white/10"
+          (click)="resetFilters()"
+        >
+          Xoá bộ lọc
+        </button>
+      }
+      <a
+        routerLink="/shop"
+        class="rounded-md border border-white/20 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-white/10"
+      >
+        Mua linh kiện lẻ
+      </a>
+      <a
+        routerLink="/cart"
+        class="rounded-md border border-white/20 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-white/10"
+      >
+        🛒 Giỏ hàng
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 2. Tab hạng bộ (Văn phòng · Gaming · Đồ hoạ · Cao cấp) ===== -->
+<section class="border-b border-white/10 bg-slate-950 px-4 sm:px-6">
+  <div class="mx-auto flex max-w-6xl gap-2 overflow-x-auto py-3">
+    <button type="button" [class]="tabClass(null)" (click)="selectTier(null)">Tất cả</button>
+
+    @for (tier of tiers; track tier.value) {
+      <button type="button" [class]="tabClass(tier.value)" (click)="selectTier(tier.value)">
+        {{ tier.icon }} {{ tier.label }}
+      </button>
+    }
+  </div>
+</section>
+
+<!-- ===== 3. Bộ lọc (từ khoá · sắp xếp · chỉ bộ còn hàng) ===== -->
+<section class="border-b border-white/10 bg-slate-900 px-4 py-4 sm:px-6">
+  <form
+    class="mx-auto grid max-w-6xl gap-3 sm:grid-cols-2 lg:grid-cols-4"
+    [formGroup]="filters"
+    (ngSubmit)="applyFilters()"
+  >
+    <div class="sm:col-span-2">
+      <label [class]="labelClass" for="keyword">Tìm theo tên hoặc mã bộ</label>
+      <input
+        id="keyword"
+        type="search"
+        placeholder="VD: PC Gaming, PC-GAMING-01, văn phòng…"
+        formControlName="keyword"
+        [class]="inputClass"
+      />
+    </div>
+
+    <div>
+      <label [class]="labelClass" for="sortBy">Sắp xếp</label>
+      <select id="sortBy" formControlName="sortBy" [class]="inputClass">
+        @for (option of sortOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+
+    <div>
+      <label [class]="labelClass" for="inStockOnly">Tình trạng</label>
+      <select id="inStockOnly" formControlName="inStockOnly" [class]="inputClass">
+        <option [ngValue]="false">Tất cả bộ</option>
+        <option [ngValue]="true">Chỉ bộ lắp được ngay</option>
+      </select>
+    </div>
+
+    <div class="flex items-end gap-2 sm:col-span-2 lg:col-span-4">
+      <button
+        type="submit"
+        class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700"
+      >
+        Tìm bộ phù hợp
+      </button>
+      <button
+        type="button"
+        class="rounded-md border border-white/20 px-4 py-2 text-sm text-slate-200 transition hover:bg-white/10"
+        (click)="resetFilters()"
+      >
+        Xoá lọc
+      </button>
+    </div>
+  </form>
+</section>
+
+<!-- ===== 4. Kết quả: Loading · Lỗi · Rỗng · Lưới thẻ bộ ===== -->
+<section class="bg-slate-950 px-4 py-8 sm:px-6">
+  <div class="mx-auto max-w-6xl">
+    @if (loading()) {
+      <!-- Loading: skeleton -->
+      <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
+        @for (placeholder of skeletons; track $index) {
+          <div class="animate-pulse overflow-hidden rounded-xl border border-white/10 bg-slate-900/60">
+            <div class="h-44 bg-slate-800"></div>
+            <div class="space-y-3 p-4">
+              <div class="h-3 w-1/2 rounded bg-slate-800"></div>
+              <div class="h-4 w-4/5 rounded bg-slate-800"></div>
+              <div class="h-4 w-3/5 rounded bg-slate-800"></div>
+              <div class="h-5 w-1/3 rounded bg-slate-800"></div>
+              <div class="h-8 w-full rounded bg-slate-800"></div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (loadFailed()) {
+      <!-- Lỗi tải danh sách -->
+      <div
+        class="flex flex-col items-center justify-center gap-3 rounded-xl border border-white/10 bg-slate-900/60 px-6 py-14 text-center"
+      >
+        <span class="text-4xl" aria-hidden="true">📡</span>
+        <p class="text-base font-semibold text-white">Không tải được danh sách bộ PC</p>
+        <p class="max-w-md text-sm text-slate-400">Vui lòng kiểm tra kết nối và thử lại.</p>
+        <button
+          type="button"
+          class="mt-1 rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700"
+          (click)="retry()"
+        >
+          Thử lại
+        </button>
+      </div>
+    }
+
+    @if (!loading() && !loadFailed() && result().items.length === 0) {
+      <!-- Rỗng: có lọc ⇒ không tìm thấy · không lọc ⇒ cửa hàng chưa có bộ nào -->
+      <div
+        class="flex flex-col items-center justify-center gap-3 rounded-xl border border-white/10 bg-slate-900/60 px-6 py-14 text-center"
+      >
+        @if (filtered()) {
+          <span class="text-4xl" aria-hidden="true">🔍</span>
+          <p class="text-base font-semibold text-white">Không có bộ nào phù hợp</p>
+          <p class="max-w-md text-sm text-slate-400">Thử bỏ vài điều kiện lọc hoặc chọn hạng khác.</p>
+          <button
+            type="button"
+            class="mt-1 rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700"
+            (click)="resetFilters()"
+          >
+            Xoá bộ lọc
+          </button>
+        } @else {
+          <span class="text-4xl" aria-hidden="true">🖥️</span>
+          <p class="text-base font-semibold text-white">Cửa hàng chưa có bộ PC dựng sẵn</p>
+          <p class="max-w-md text-sm text-slate-400">
+            Bạn vẫn có thể mua linh kiện lẻ ở trang Mua sắm, hoặc quay lại sau.
+          </p>
+        }
+      </div>
+    }
+
+    @if (!loading() && !loadFailed() && result().items.length > 0) {
+      <!-- Lưới thẻ bộ -->
+      <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        @for (build of result().items; track build.id) {
+          <article
+            class="group flex flex-col overflow-hidden rounded-xl border border-white/10 bg-slate-900/60 transition duration-200 hover:-translate-y-0.5 hover:border-brand-500/40 hover:shadow-lg hover:shadow-black/30"
+          >
+            <a
+              class="relative block h-44 overflow-hidden bg-slate-800"
+              [routerLink]="['/pc-builds', build.id]"
+              [attr.aria-label]="build.name"
+            >
+              @if (showImage(build)) {
+                <img
+                  class="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                  [src]="build.imageUrl"
+                  [alt]="build.name"
+                  loading="lazy"
+                  (error)="onImageError(build.id)"
+                />
+              } @else {
+                <span class="grid h-full place-items-center text-4xl text-slate-600" aria-hidden="true">🖥️</span>
+              }
+
+              <span
+                class="absolute left-2 top-2 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+                [class]="tierClass(build.tier)"
+              >
+                {{ tierLabel(build.tier) }}
+              </span>
+
+              @if (build.isFeatured) {
+                <span
+                  class="absolute right-2 top-2 rounded-full bg-brand-600 px-2.5 py-0.5 text-[11px] font-semibold text-white"
+                >
+                  Nổi bật
+                </span>
+              }
+            </a>
+
+            <div class="flex flex-1 flex-col gap-2 p-4">
+              <div class="flex items-center justify-between gap-2">
+                <p class="truncate font-mono text-[11px] uppercase tracking-wide text-slate-400">
+                  {{ build.code }}
+                </p>
+                <span
+                  class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium"
+                  [class]="stockClass(build.availableBuilds)"
+                >
+                  {{ stockLabel(build.availableBuilds) }}
+                </span>
+              </div>
+
+              <a
+                class="line-clamp-2 text-sm font-semibold text-white transition hover:text-brand-300"
+                [routerLink]="['/pc-builds', build.id]"
+              >
+                {{ build.name }}
+              </a>
+
+              @if (build.summary) {
+                <p class="line-clamp-2 text-xs text-slate-400">{{ build.summary }}</p>
+              }
+
+              <p class="text-[11px] text-slate-400">
+                <span class="font-semibold text-slate-200">{{ build.componentCount }} linh kiện</span>
+                gồm trong bộ
+              </p>
+
+              @if (build.componentPreview) {
+                <p class="line-clamp-2 text-[11px] text-slate-500">{{ build.componentPreview }}</p>
+              }
+
+              <div class="mt-auto space-y-1">
+                <p class="text-lg font-semibold text-brand-300">{{ formatPrice(build.partsPrice) }}</p>
+                <p class="text-[11px] text-slate-500">
+                  Giá bộ = tổng giá linh kiện (đã gồm khuyến mãi hiện hành)
+                </p>
+
+                @if (lastError() === build.name) {
+                  <p class="text-[11px] text-rose-300">
+                    Chưa thêm được bộ này (có thể thiếu tồn kho). Vui lòng thử lại.
+                  </p>
+                }
+
+                <div class="mt-1 flex gap-2">
+                  <a
+                    class="flex-1 rounded-md border border-white/20 px-3 py-1.5 text-center text-xs font-medium text-slate-100 transition hover:bg-white/10"
+                    [routerLink]="['/pc-builds', build.id]"
+                  >
+                    Chi tiết
+                  </a>
+                  <button
+                    type="button"
+                    class="flex-1 rounded-md bg-brand-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    [disabled]="build.availableBuilds <= 0 || addingBuildId() === build.id"
+                    (click)="addToCart(build)"
+                  >
+                    {{ addingBuildId() === build.id ? 'Đang thêm…' : 'Thêm vào giỏ' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+
+      <div class="mt-6 overflow-hidden rounded-xl border border-white/10 bg-slate-900/40">
+        <app-pagination
+          [pageNumber]="result().pageNumber"
+          [pageSize]="result().pageSize"
+          [totalCount]="result().totalCount"
+          [totalPages]="result().totalPages"
+          (pageChange)="changePage($event)"
+          (pageSizeChange)="changePageSize($event)"
+        />
+      </div>
+    }
+  </div>
+</section>

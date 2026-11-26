@@ -10,6 +10,7 @@ và `<Module>Sql.cs` (hằng số tên stored procedure + hàm gọi qua Dapper)
 | `Catalog` | `/api/products`, `/api/categories`, `/api/brands`, `/api/compatibility/check`, `/api/admin/products` | `usp_Product_*`, `usp_Compat_Check` + EF danh mục |
 | `Pricing` | `/api/vouchers/validate`, `/api/admin/price-tiers`, `promotions`, `vouchers`, `customer-groups` | EF + `usp_Voucher_Validate`, `usp_ProductPrice_Upsert` |
 | `Cart` | `/api/cart`, `/api/cart/items`, `/select-all`, `/merge` | `usp_Cart_*` |
+| `PcBuilds` | `/api/pc-builds`, `/api/pc-builds/{id}`, `/pc-builds/{id}/add-to-cart` (PC build sẵn — combo linh kiện) | `usp_PcBuild_*` (Database/10_pc_builds.sql) |
 | `Orders` | `/api/orders`, `/orders/{id}/confirm`, `/pack`, `/ship`, `/cancel`, `/complete`, `admin/orders` | `usp_Order_*`, `usp_Internal_SetOrderStatus` |
 | `Payments` | `/api/orders/{id}/payments`, callback cổng thanh toán | `usp_Payment_*` |
 | `Inventory` | `/api/inventory/*`, nhập kho, chuyển kho, kiểm kê, serial, nhà cung cấp | `usp_Inventory_*`, `usp_Transfer_*`, `usp_Serial_*` + EF `Suppliers` |
